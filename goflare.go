@@ -90,7 +90,7 @@ func New(c *Config) *Goflare {
 	tw.SetOutputName(outputName)
 	// tw.SetDisableWasmExecJsOutput(true) // Defaults to disabled now
 	tw.SetWasmExecJsOutputDir(c.RelativeOutputDirectory)
-	tw.SetBuildOnDisk(true)
+	tw.SetBuildOnDisk(true, false)
 
 	g := &Goflare{
 		tw:               tw,
