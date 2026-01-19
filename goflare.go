@@ -12,10 +12,10 @@ type Goflare struct {
 }
 
 type Config struct {
-	AppRootDir                string // default: "."
-	RelativeInputDirectory    string // input relative directory for source code server app.go to deploy app.wasm (relative) default: "web"
-	RelativeOutputDirectory   string // output relative directory for worker.js and app.wasm file (relative) default: "deploy/cloudflare"
-	MainInputFile             string // eg: "main.go"
+	AppRootDir                string        // default: "."
+	RelativeInputDirectory    func() string // input relative directory for source code server app.go to deploy app.wasm (relative) default: "web"
+	RelativeOutputDirectory   func() string // output relative directory for worker.js and app.wasm file (relative) default: "deploy/cloudflare"
+	MainInputFile             string        // eg: "main.go"
 	CompilingArguments        func() []string
 	OutputWasmFileName        string // WASM file name (default: "worker.wasm")
 	BuildPageFunctionShortcut string // build assets wasm,js, json files to pages functions (default: "f")
@@ -27,8 +27,8 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		AppRootDir:              ".",
-		RelativeInputDirectory:  "web",
-		RelativeOutputDirectory: "deploy/cloudflare",
+		RelativeInputDirectory:  func() string { return "web" },
+		RelativeOutputDirectory: func() string { return "deploy/cloudflare" },
 		MainInputFile:           "main.go",
 		CompilingArguments:      nil,
 		OutputWasmFileName:      "worker.wasm",
@@ -53,10 +53,10 @@ func New(c *Config) *Goflare {
 			c.AppRootDir = dc.AppRootDir
 		}
 
-		if c.RelativeInputDirectory == "" {
+		if c.RelativeInputDirectory == nil {
 			c.RelativeInputDirectory = dc.RelativeInputDirectory
 		}
-		if c.RelativeOutputDirectory == "" {
+		if c.RelativeOutputDirectory == nil {
 			c.RelativeOutputDirectory = dc.RelativeOutputDirectory
 		}
 		if c.MainInputFile == "" {
@@ -89,7 +89,7 @@ func New(c *Config) *Goflare {
 	tw.SetMainInputFile(c.MainInputFile)
 	tw.SetOutputName(outputName)
 	// tw.SetDisableWasmExecJsOutput(true) // Defaults to disabled now
-	tw.SetWasmExecJsOutputDir(c.RelativeOutputDirectory)
+	tw.SetWasmExecJsOutputDir(c.RelativeOutputDirectory()) // Call it as it expects string
 	tw.SetBuildOnDisk(true, false)
 
 	g := &Goflare{

@@ -15,8 +15,8 @@ func TestGeneratePagesFiles(t *testing.T) {
 	config.AppRootDir = tempDir
 
 	// Define paths
-	inputDir := filepath.Join(tempDir, config.RelativeInputDirectory)
-	outputDir := filepath.Join(tempDir, config.RelativeOutputDirectory)
+	inputDir := filepath.Join(tempDir, config.RelativeInputDirectory())
+	outputDir := filepath.Join(tempDir, config.RelativeOutputDirectory())
 
 	// Create directories
 	err := os.MkdirAll(inputDir, 0755)

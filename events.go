@@ -5,7 +5,7 @@ import "path/filepath"
 // MainInputFileRelativePath returns the relative path to the main input file
 // This is used by devwatch to determine file ownership for Go files
 func (h *Goflare) MainInputFileRelativePath() string {
-	return filepath.Join(h.config.RelativeInputDirectory, h.config.MainInputFile)
+	return filepath.Join(h.config.RelativeInputDirectory(), h.config.MainInputFile)
 }
 
 // NewFileEvent handles file change events for goflare
@@ -28,6 +28,6 @@ func (h *Goflare) SupportedExtensions() []string {
 func (h *Goflare) UnobservedFiles() []string {
 	return []string{
 		h.tw.OutputRelativePath(),
-		filepath.Join(h.config.RelativeOutputDirectory, h.outputJsFileName),
+		filepath.Join(h.config.RelativeOutputDirectory(), h.outputJsFileName),
 	}
 }
