@@ -12,7 +12,7 @@ require (
 	github.com/tinywasm/devflow v0.0.61 // indirect
 	github.com/tinywasm/fmt v0.16.1 // indirect
 	github.com/tinywasm/gobuild v0.0.22 // indirect
-	github.com/tinywasm/wizard v0.0.13 // indirect
+	github.com/tinywasm/wizard v0.0.14 // indirect
 	github.com/zalando/go-keyring v0.2.6 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 )
