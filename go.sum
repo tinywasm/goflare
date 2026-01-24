@@ -18,8 +18,8 @@ github.com/tinywasm/client v0.4.7 h1:02Ll6OcK2WGs52p2Uw1P7dQksy7MKncQykM8NJBTYgw
 github.com/tinywasm/client v0.4.7/go.mod h1:qLHBgWmPsdpAxOXSHPYgUbuYZTwb9MteeVOkkhu3OUQ=
 github.com/tinywasm/context v0.0.11 h1:k+IeEPihgORcwp+2n2qygBzfh61fMouFzOEhBwvVIrI=
 github.com/tinywasm/context v0.0.11/go.mod h1:xEk6ZfbF3Jx8JnM4UqUJxfM0WM87q8JC3wOA99tccV8=
-github.com/tinywasm/devflow v0.0.74 h1:UeInwKV4nzJ2svCndpznkziutKGcP632xMbKsq8vChA=
-github.com/tinywasm/devflow v0.0.74/go.mod h1:RHvS8e9aRWeu6Z7vJxSvUby7657yattOdMjGf874N2A=
+github.com/tinywasm/devflow v0.0.75 h1:sI41haVLxc526S/iijRyn8WgYsbChUxxMGkKQKAUpLs=
+github.com/tinywasm/devflow v0.0.75/go.mod h1:RHvS8e9aRWeu6Z7vJxSvUby7657yattOdMjGf874N2A=
 github.com/tinywasm/fmt v0.16.1 h1:g87ny5CxZSavDpZZNxSYNW+7aaaHYzRwuD+lYGtPceo=
 github.com/tinywasm/fmt v0.16.1/go.mod h1:L2GCAi6asgytPV6TVvGrRq5Ml+DkUt1Ijo5i/2J1jOY=
 github.com/tinywasm/gobuild v0.0.22 h1:Im/21j3dBibkyoOElZDqWS4fiI6QmPsBSS50CU76e+8=
