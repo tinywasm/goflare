@@ -10,7 +10,7 @@ require (
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/tinywasm/context v0.0.11 // indirect
 	github.com/tinywasm/devflow v0.0.77 // indirect
-	github.com/tinywasm/fmt v0.16.1 // indirect
+	github.com/tinywasm/fmt v0.16.2 // indirect
 	github.com/tinywasm/gobuild v0.0.22 // indirect
 	github.com/tinywasm/wizard v0.0.14 // indirect
 	github.com/zalando/go-keyring v0.2.6 // indirect
