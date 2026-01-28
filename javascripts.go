@@ -16,7 +16,7 @@ func (g *Goflare) generateWorkerFile() error {
 	}
 
 	// Read wasm_exec.js content
-	wasmExecContent, err := g.tw.JavascriptForInitializing("", "")
+	wasmExecContent, err := g.tw.GetSSRClientInitJS("", "")
 	if err != nil {
 		return fmt.Errorf("failed to get wasm_exec content: %w", err)
 	}
