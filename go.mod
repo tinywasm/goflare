@@ -2,7 +2,7 @@ module github.com/tinywasm/goflare
 
 go 1.25.2
 
-require github.com/tinywasm/client v0.0.79
+require github.com/tinywasm/client v0.0.80
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0 // indirect
