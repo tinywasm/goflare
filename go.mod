@@ -18,7 +18,7 @@ require (
 	github.com/tinywasm/context v0.0.11 // indirect
 	github.com/tinywasm/devflow v0.0.77 // indirect
 	github.com/tinywasm/fmt v0.16.2 // indirect
-	github.com/tinywasm/gobuild v0.0.22 // indirect
+	github.com/tinywasm/gobuild v0.0.23 // indirect
 	github.com/tinywasm/mcpserve v0.0.18 // indirect
 	github.com/tinywasm/wizard v0.0.14 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
