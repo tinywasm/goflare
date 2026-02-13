@@ -16,7 +16,7 @@ require (
 	github.com/mark3labs/mcp-go v0.43.2 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/tinywasm/context v0.0.11 // indirect
-	github.com/tinywasm/devflow v0.2.0 // indirect
+	github.com/tinywasm/devflow v0.2.1 // indirect
 	github.com/tinywasm/fmt v0.17.0 // indirect
 	github.com/tinywasm/gobuild v0.0.24 // indirect
 	github.com/tinywasm/mcpserve v0.0.19 // indirect
