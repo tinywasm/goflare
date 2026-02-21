@@ -9,8 +9,6 @@ type Goflare struct {
 	config           *Config
 	outputJsFileName string // e.g., "_worker.js"
 	log              func(message ...any)
-	auth             *Auth
-	cfDeployBaseURL  string // overridable for tests; default: cfAPIBase
 }
 
 type Config struct {
@@ -98,31 +96,8 @@ func New(c *Config) *Goflare {
 		tw:               tw,
 		config:           c,
 		outputJsFileName: "_worker.js",
-		cfDeployBaseURL:  cfAPIBase,
 	}
 
-	return g
-}
-
-// SetKeys injects the KeyManager used for Cloudflare credentials.
-// Must be called before Auth() or DeployPages().
-func (g *Goflare) SetKeys(keys KeyManager) {
-	g.auth = NewAuth(keys)
-	g.auth.SetLog(func(msgs ...any) { g.Logger(msgs...) })
-}
-
-// Auth returns the Auth instance. Returns nil if SetKeys was not called.
-func (g *Goflare) Auth() *Auth {
-	return g.auth
-}
-
-// NewForTest creates a Goflare instance with injected KeyManager and CF API base URL.
-// Intended for use in tests only.
-func NewForTest(c *Config, keys KeyManager, cfBaseURL string) *Goflare {
-	g := New(c)
-	g.auth = NewAuthWithBaseURL(keys, cfBaseURL)
-	g.auth.SetLog(func(msgs ...any) { g.Logger(msgs...) })
-	g.cfDeployBaseURL = cfBaseURL
 	return g
 }
 

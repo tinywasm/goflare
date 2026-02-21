@@ -42,21 +42,6 @@ func (h *Goflare) Change(newValue string, progress func(msgs ...any)) {
 			progress("Workers build completed successfully")
 		}
 
-	case "d":
-		if progress != nil {
-			progress("Deploying to Cloudflare Pages...")
-		}
-		err = h.DeployPages()
-		if err != nil {
-			if progress != nil {
-				progress("Deploy failed:", err.Error())
-			}
-			return
-		}
-		if progress != nil {
-			progress("Deploy completed successfully")
-		}
-
 	default:
 		if progress != nil {
 			progress("Unknown shortcut:", newValue)
@@ -68,6 +53,5 @@ func (h *Goflare) Shortcuts() []map[string]string {
 	return []map[string]string{
 		{h.config.BuildPageFunctionShortcut: "Build Cloudflare Functions Pages Files"},
 		{h.config.BuildWorkerShortcut: "Build Cloudflare Workers Files"},
-		{"d": "Deploy to Cloudflare Pages"},
 	}
 }
