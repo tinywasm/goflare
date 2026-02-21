@@ -322,12 +322,29 @@ Both methods should handle:
 - Test template generation
 - Verify file structure
 - Test error conditions
+- Mock HTTP server for CF API endpoints
 
 ### Integration Tests
 - Compile actual Go WASM
 - Generate all files
 - Validate against wrangler
 - Test deployment (local dev server)
+
+## Auth & Deploy Flow
+
+GoFlare includes built-in support for deploying directly to Cloudflare Pages via the Cloudflare API, without requiring the Wrangler CLI.
+
+### 1. Authentication (Wizard)
+- Cloudflare's API requires a user-generated "bootstrap token".
+- GoFlare uses this bootstrap token once to programmatically generate a scoped `Pages:Edit` token.
+- The scoped token and account details are stored securely in the system keyring.
+- See the [AUTH_FLOW diagram](./diagrams/AUTH_FLOW.md).
+
+### 2. Direct Deployment
+- GoFlare reads the project details and scoped token from the keyring.
+- It verifies the built payload containing `_worker.js` and compiled WASM.
+- It performs a multipart/form-data upload directly to the Cloudflare Pages REST API.
+- See the [DEPLOY_FLOW diagram](./diagrams/DEPLOY_FLOW.md).
 
 ## Future Enhancements
 

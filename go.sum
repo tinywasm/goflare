@@ -41,8 +41,12 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/tinywasm/client v0.5.32 h1:TFcdt0ywuTNvK1GItDcKRtxH+kD28A5jWvMc9S5Ajrc=
 github.com/tinywasm/client v0.5.32/go.mod h1:s7kPOXbtJKwXaKTc2e6MzSIZvuPnVsL2VQfDzFURab0=
+github.com/tinywasm/client v0.5.50 h1:iuGMQ8qU8qTtMb+V34LDivyCQXR914geIX2dbZlfVZM=
+github.com/tinywasm/client v0.5.50/go.mod h1:SrkZiXwr29RH9597h4exNEpMFVEt2t5OCLCohdOKgcw=
 github.com/tinywasm/context v0.0.11 h1:k+IeEPihgORcwp+2n2qygBzfh61fMouFzOEhBwvVIrI=
 github.com/tinywasm/context v0.0.11/go.mod h1:xEk6ZfbF3Jx8JnM4UqUJxfM0WM87q8JC3wOA99tccV8=
+github.com/tinywasm/context v0.0.17 h1:3BMVOJksFTVka9rO2rEx9+kG4Xzn/IBpyktBQHhZJfw=
+github.com/tinywasm/context v0.0.17/go.mod h1:w49WVGNfikngl3S6UcUin1rY6CNAC6wlmfE78iVfL6Q=
 github.com/tinywasm/devflow v0.2.9 h1:oRrZJLPUYvkLlJAQb+mRcw9I6xXCVJIpgBSWiCFNMcw=
 github.com/tinywasm/devflow v0.2.9/go.mod h1:duQYq77ZfPGgrenPs2TyiwXPZ8QBWMC7YACHGJgus4w=
 github.com/tinywasm/fmt v0.18.4 h1:rzc+IPMHXDRXLPY0LrQSQWZW9gQwu6W5ii4pIPSncqI=
@@ -53,6 +57,8 @@ github.com/tinywasm/mcpserve v0.0.20 h1:VGCJztAZIBq3WX/s2yqx0IcN9i+veG5sdQkJsgJ6
 github.com/tinywasm/mcpserve v0.0.20/go.mod h1:oN5PiB/mBUy/CQpNV3avBpRrUeyl2OpP2Z2qR86TXDM=
 github.com/tinywasm/wizard v0.0.14 h1:8ywDPi1HN0ybsb3marVcnbIXn0y/y7KhMpv0xiRd2ms=
 github.com/tinywasm/wizard v0.0.14/go.mod h1:pUsgdR2vS/fNJDWhP9ZXlfUzCPClAyqJRSZlaUcEoMg=
+github.com/tinywasm/wizard v0.0.21 h1:3Pprce0ZXXvFilBtzBU+CHmm1uQrK0TJWCMiInUPMxY=
+github.com/tinywasm/wizard v0.0.21/go.mod h1:TXjAtXdjRSd74yo1irKdyqyYorTq1TkSqZ5A3Jpp4aQ=
 github.com/wk8/go-ordered-map/v2 v2.1.8 h1:5h/BUHu93oj4gIdvHHHGsScSTMijfx5PeYkE/fJgbpc=
 github.com/wk8/go-ordered-map/v2 v2.1.8/go.mod h1:5nJHM5DyteebpVlHnWMV0rPz6Zp7+xBAnxjb1X5vnTw=
 github.com/yosida95/uritemplate/v3 v3.0.2 h1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=
