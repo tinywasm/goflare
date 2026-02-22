@@ -20,7 +20,7 @@ require (
 	github.com/tinywasm/fmt v0.18.4 // indirect
 	github.com/tinywasm/gobuild v0.0.24 // indirect
 	github.com/tinywasm/mcpserve v0.0.20 // indirect
-	github.com/tinywasm/wizard v0.0.21 // indirect
+	github.com/tinywasm/wizard v0.0.22 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/zalando/go-keyring v0.2.6 // indirect

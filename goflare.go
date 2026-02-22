@@ -118,5 +118,7 @@ func (g *Goflare) Logger(messages ...any) {
 // mode: "L" (Large fast/Go), "M" (Medium TinyGo debug), "S" (Small TinyGo production)
 func (g *Goflare) SetCompilerMode(newValue string) {
 	// Execute mode change
-	g.tw.Change(newValue)
+	if g.tw != nil {
+		g.tw.Change(newValue)
+	}
 }
