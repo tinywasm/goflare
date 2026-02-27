@@ -28,8 +28,8 @@ github.com/tinywasm/mcp v0.0.0-20260222182815-eed752284ce7 h1:0Ak90s0ReKulaek77E
 github.com/tinywasm/mcp v0.0.0-20260222182815-eed752284ce7/go.mod h1:k5KCsLlUZBazx3MxsuOlOecwNfVFGLl+PAtvE+N39OU=
 github.com/tinywasm/mcpserve v0.0.24 h1:ByKxOnRXQFZoxAo9KLZbSVsibvrBRMj+GgdJ39xVK7o=
 github.com/tinywasm/mcpserve v0.0.24/go.mod h1:wfaduwCIZYxijkiqcryZW42rXCYmdmGCgSeCV3VKbH4=
-github.com/tinywasm/sse v0.0.10 h1:+8SsjabKrkMZZ1hgaApQz3WOvnmgaduiGxSPVqd0mNU=
-github.com/tinywasm/sse v0.0.10/go.mod h1:srTHTLi+j2PEkqaKqjcJ2tTkHVhY4wpUDkCx/G/Ajdw=
+github.com/tinywasm/sse v0.0.11 h1:LM1r1yMR5JC+OMkPpP7Whnzhftl4p3IgWeSGzbN6cwM=
+github.com/tinywasm/sse v0.0.11/go.mod h1:srTHTLi+j2PEkqaKqjcJ2tTkHVhY4wpUDkCx/G/Ajdw=
 github.com/tinywasm/wizard v0.0.22 h1:aoH9AgcE8ePyvUdTKy51AD6XyHZgi4CU7GrdFFT0o7w=
 github.com/tinywasm/wizard v0.0.22/go.mod h1:TXjAtXdjRSd74yo1irKdyqyYorTq1TkSqZ5A3Jpp4aQ=
 github.com/zalando/go-keyring v0.2.6 h1:r7Yc3+H+Ux0+M72zacZoItR3UDxeWfKTcabvkI8ua9s=
