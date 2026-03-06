@@ -12,7 +12,7 @@ require (
 	github.com/tinywasm/devflow v0.2.22 // indirect
 	github.com/tinywasm/fmt v0.18.4 // indirect
 	github.com/tinywasm/gobuild v0.0.24 // indirect
-	github.com/tinywasm/mcp v0.0.12 // indirect
+	github.com/tinywasm/mcp v0.0.15 // indirect
 	github.com/tinywasm/mcpserve v0.0.31 // indirect
 	github.com/tinywasm/sse v0.0.12 // indirect
 	github.com/tinywasm/wizard v0.0.22 // indirect
