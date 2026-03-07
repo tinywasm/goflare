@@ -10,9 +10,11 @@ require (
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/tinywasm/context v0.0.17 // indirect
 	github.com/tinywasm/devflow v0.2.22 // indirect
-	github.com/tinywasm/fmt v0.18.4 // indirect
+	github.com/tinywasm/fetch v0.1.22 // indirect
+	github.com/tinywasm/fmt v0.18.6 // indirect
 	github.com/tinywasm/gobuild v0.0.24 // indirect
-	github.com/tinywasm/mcp v0.0.15 // indirect
+	github.com/tinywasm/json v0.1.7 // indirect
+	github.com/tinywasm/mcp v0.0.17 // indirect
 	github.com/tinywasm/mcpserve v0.0.31 // indirect
 	github.com/tinywasm/sse v0.0.12 // indirect
 	github.com/tinywasm/wizard v0.0.22 // indirect
