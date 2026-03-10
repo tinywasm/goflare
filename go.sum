@@ -22,8 +22,8 @@ github.com/tinywasm/devflow v0.3.4 h1:gOjgDxmRIqVDNWqwxQS4JqPbZ8xnNd3vPSUBKJhX8r
 github.com/tinywasm/devflow v0.3.4/go.mod h1:C/LFzYIVd+81PBP7kxPSMxP8H6EXEuFxDQO1TvZD2oI=
 github.com/tinywasm/fetch v0.1.22 h1:HYz0IA2doZ5bpIZoO5Vju9hmbR3wKENwb5kKUDilBzo=
 github.com/tinywasm/fetch v0.1.22/go.mod h1:AtYRsIZTZAdN5XyWVEA9jq2ks1Q9656DG49ccBe1WRs=
-github.com/tinywasm/fmt v0.18.6 h1:7KUWXEHcgsHXzF7h+vdiOehG6vePJljohaUpVHc6iYQ=
-github.com/tinywasm/fmt v0.18.6/go.mod h1:L2GCAi6asgytPV6TVvGrRq5Ml+DkUt1Ijo5i/2J1jOY=
+github.com/tinywasm/fmt v0.18.9 h1:M8t54VnB6ZBbxph9AF3vbmda366MIlGKRw48SKAdCfA=
+github.com/tinywasm/fmt v0.18.9/go.mod h1:L2GCAi6asgytPV6TVvGrRq5Ml+DkUt1Ijo5i/2J1jOY=
 github.com/tinywasm/gobuild v0.0.24 h1:3AijOMF72/h4LOly/EZfBSoLqEdS7FSH73c0vwfHXAg=
 github.com/tinywasm/gobuild v0.0.24/go.mod h1:48JVlXnOy8ZBiz/vz5rWMxv4ZrQvB5Fbw22kOx6RfZY=
 github.com/tinywasm/gorun v0.0.22 h1:IAADmzcTca9ap4kv7KC/FSDDdKxPwPTbM2HMxa+O5gs=

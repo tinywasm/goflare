@@ -11,7 +11,7 @@ require (
 	github.com/tinywasm/context v0.0.17 // indirect
 	github.com/tinywasm/devflow v0.3.4 // indirect
 	github.com/tinywasm/fetch v0.1.22 // indirect
-	github.com/tinywasm/fmt v0.18.6 // indirect
+	github.com/tinywasm/fmt v0.18.9 // indirect
 	github.com/tinywasm/gobuild v0.0.24 // indirect
 	github.com/tinywasm/gorun v0.0.22 // indirect
 	github.com/tinywasm/json v0.1.7 // indirect
