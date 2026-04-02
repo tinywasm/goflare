@@ -14,7 +14,7 @@ require (
 	github.com/tinywasm/fetch v0.1.23 // indirect
 	github.com/tinywasm/fmt v0.22.1 // indirect
 	github.com/tinywasm/form v0.2.0 // indirect
-	github.com/tinywasm/gobuild v0.0.24 // indirect
+	github.com/tinywasm/gobuild v0.0.25 // indirect
 	github.com/tinywasm/gorun v0.0.23 // indirect
 	github.com/tinywasm/json v0.4.0 // indirect
 	github.com/tinywasm/mcp v0.1.1 // indirect
