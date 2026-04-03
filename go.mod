@@ -16,7 +16,7 @@ require (
 	github.com/tinywasm/form v0.2.0 // indirect
 	github.com/tinywasm/gobuild v0.0.25 // indirect
 	github.com/tinywasm/gorun v0.0.23 // indirect
-	github.com/tinywasm/json v0.4.0 // indirect
+	github.com/tinywasm/json v0.4.1 // indirect
 	github.com/tinywasm/mcp v0.1.1 // indirect
 	github.com/tinywasm/orm v0.6.0 // indirect
 	github.com/tinywasm/time v0.4.0 // indirect
