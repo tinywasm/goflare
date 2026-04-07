@@ -10,45 +10,30 @@ import (
 	"github.com/tinywasm/goflare"
 )
 
-func TestGeneratePagesFiles(t *testing.T) {
-	// Create a temporary directory for testing
-	tmpDir, err := os.MkdirTemp("", "goflare-test-*")
+func TestGeneratePagesFiles_Integration(t *testing.T) {
+	tmpDir, cleanup, err := TempDir()
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf("TempDir failed: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer cleanup()
 
-	// Create a dummy main.go file
-	webDir := filepath.Join(tmpDir, "web")
-	err = os.MkdirAll(webDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create web dir: %v", err)
-	}
+	publicDir := filepath.Join(tmpDir, "public")
+	os.MkdirAll(publicDir, 0755)
+	os.WriteFile(filepath.Join(publicDir, "index.html"), []byte("index"), 0644)
 
-	mainGoContent := `package main
-func main() {}
-`
-	err = os.WriteFile(filepath.Join(webDir, "main.go"), []byte(mainGoContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to write main.go: %v", err)
-	}
-
-	// Initialize Goflare with test configuration
 	cfg := &goflare.Config{
-		ProjectName: "test-project",
-		AccountID:   "test-account",
-		Entry:       webDir,
-		OutputDir:   filepath.Join(tmpDir, ".goflare/"),
+		ProjectName: "test-pages",
+		AccountID:   "abc123",
+		PublicDir:   publicDir,
+		OutputDir:   filepath.Join(tmpDir, ".goflare"),
 	}
+
 	g := goflare.New(cfg)
+	if err := g.GeneratePagesFiles(); err != nil {
+		t.Fatalf("GeneratePagesFiles failed: %v", err)
+	}
 
-	// Since we haven't implemented generateWorkerFile and generateWasmFile yet in Goflare
-	// but they are called in GeneratePagesFiles (which is in pages.go),
-	// this test will likely fail until those are refactored/implemented.
-	// For Stage 01, we just want to move the file and check if it compiles.
-
-	err = g.GeneratePagesFiles()
-	if err != nil {
-		t.Logf("Expected failure as internal build methods are not yet fully refactored: %v", err)
+	if _, err := os.Stat(filepath.Join(cfg.OutputDir, "dist", "index.html")); os.IsNotExist(err) {
+		t.Errorf("dist/index.html not found")
 	}
 }

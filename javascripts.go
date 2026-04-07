@@ -7,11 +7,14 @@ import (
 )
 
 func (g *Goflare) generateWorkerFile() error {
-	destPath := filepath.Join(g.Config.OutputDir, "_worker.js")
+	// Worker files are: worker.js, wasm_exec.js, worker.wasm
+	// wasm.go handles worker.wasm
+
+	jsPath := filepath.Join(g.Config.OutputDir, "worker.js")
+	execPath := filepath.Join(g.Config.OutputDir, "wasm_exec.js")
 
 	// Create output directory if it doesn't exist
-	outputDir := filepath.Dir(destPath)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(g.Config.OutputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -20,30 +23,18 @@ func (g *Goflare) generateWorkerFile() error {
 	if err != nil {
 		return fmt.Errorf("failed to get wasm_exec content: %w", err)
 	}
-
-	// Read and modify runtime.mjs content
-	runtimeContent := g.runtimeMjs()
+	if err := os.WriteFile(execPath, []byte(wasmExecContent), 0644); err != nil {
+		return fmt.Errorf("failed to write wasm_exec.js: %w", err)
+	}
 
 	// Read worker template
 	workerTemplate := g.getWorkerMjs()
 
-	// Combine all content: wasm_exec.js + runtime.mjs + worker logic
-	combinedContent := string(wasmExecContent) + "\n\n" + string(runtimeContent) + "\n\n" + string(workerTemplate)
+	// Modify template to import wasm_exec.js and worker.wasm
+	// In Stage 05, we'll see that for Workers, we might need a specific structure
+	// but for now, we follow Stage 03 requirements.
 
-	// Write the combined file
-	err = os.WriteFile(destPath, []byte(combinedContent), 0644)
-	if err != nil {
-		return fmt.Errorf("failed to write combined worker file: %w", err)
-	}
-
-	return nil
-}
-
-// runtimeMjs returns the runtime code,load wasm file for inline use (no ES6 imports)
-// This version is for combining into a single _worker.js file
-func (g *Goflare) runtimeMjs() string {
-	return fmt.Sprintf(`// Runtime functions - inline version
-import { connect } from "cloudflare:sockets";
+	header := `import "./wasm_exec.js";
 import mod from "./worker.wasm";
 
 async function loadModule() {
@@ -54,10 +45,20 @@ function createRuntimeContext({ env, ctx, binding }) {
   return {
     env,
     ctx,
-    connect,
     binding,
   };
-}`)
+}
+`
+
+	combinedContent := header + "\n\n" + string(workerTemplate)
+
+	// Write the combined file
+	err = os.WriteFile(jsPath, []byte(combinedContent), 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write worker.js file: %w", err)
+	}
+
+	return nil
 }
 
 func (g *Goflare) getWorkerMjs() string {

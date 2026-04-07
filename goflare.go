@@ -78,17 +78,7 @@ func (g *Goflare) SetCompilerMode(newValue string) {
 	}
 }
 
-func (g *Goflare) Build() error {
-	// To be implemented in Stage 03
-	return nil
-}
-
 func (g *Goflare) Deploy(store Store) error {
 	// To be implemented in Stage 05/06
-	return nil
-}
-
-func (g *Goflare) Auth(store Store) error {
-	// To be implemented in Stage 04
 	return nil
 }
