@@ -3,41 +3,33 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/tinywasm/goflare"
 )
 
 func main() {
-	config := goflare.DefaultConfig()
-
-	// Verify input file exists
-	inputFile := filepath.Join(config.RelativeInputDirectory(), config.MainInputFile)
-	if _, err := os.Stat(inputFile); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "Error: Input file not found: %s\n", inputFile)
-		fmt.Fprintf(os.Stderr, "Please create your WASM entry point at this location.\n")
+	config, err := goflare.LoadConfigFromEnv(".env")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
 		os.Exit(1)
 	}
 
-	g := goflare.New(config)
+	// For Stage 01, we just want it to compile.
+	// CLI wiring will be done in Stage 07.
+	// Let's just make it a minimal placeholder that uses the new API.
 
-	// Set compiler mode
+	if config.ProjectName == "" {
+		fmt.Println("Goflare CLI - Stage 01")
+		fmt.Println("Usage: PROJECT_NAME=my-project CLOUDFLARE_ACCOUNT_ID=... goflare")
+		return
+	}
+
+	g := goflare.New(config)
 	g.SetLog(func(messages ...any) {
 		for _, msg := range messages {
 			fmt.Println(msg)
 		}
 	})
 
-	g.SetCompilerMode("S") // Use TinyGo Small/production mode
-
-	fmt.Println("Generating Cloudflare Pages files...")
-
-	if err := g.GeneratePagesFiles(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Println("✓ Files generated successfully!")
-	fmt.Printf("  - %s/_worker.js\n", config.RelativeOutputDirectory())
-	fmt.Printf("  - %s/%s\n", config.RelativeOutputDirectory(), config.OutputWasmFileName)
+	fmt.Println("Goflare: Foundation active.")
 }
