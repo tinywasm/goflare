@@ -7,7 +7,7 @@ import (
 )
 
 func (g *Goflare) generateWorkerFile() error {
-	destPath := filepath.Join(g.config.RelativeOutputDirectory(), g.outputJsFileName)
+	destPath := filepath.Join(g.Config.OutputDir, "_worker.js")
 
 	// Create output directory if it doesn't exist
 	outputDir := filepath.Dir(destPath)
@@ -44,7 +44,7 @@ func (g *Goflare) generateWorkerFile() error {
 func (g *Goflare) runtimeMjs() string {
 	return fmt.Sprintf(`// Runtime functions - inline version
 import { connect } from "cloudflare:sockets";
-import mod from "%v";
+import mod from "./worker.wasm";
 
 async function loadModule() {
   return mod;
@@ -57,7 +57,7 @@ function createRuntimeContext({ env, ctx, binding }) {
     connect,
     binding,
   };
-}`, g.config.OutputWasmFileName)
+}`)
 }
 
 func (g *Goflare) getWorkerMjs() string {

@@ -12,7 +12,7 @@ func (h *Goflare) Change(newValue string, progress func(msgs ...any)) {
 	var err error
 
 	switch newValue {
-	case h.config.BuildPageFunctionShortcut:
+	case "f": // Pages build shortcut
 		if progress != nil {
 			progress("Starting Pages build...")
 		}
@@ -27,7 +27,7 @@ func (h *Goflare) Change(newValue string, progress func(msgs ...any)) {
 			progress("Pages build completed successfully")
 		}
 
-	case h.config.BuildWorkerShortcut:
+	case "w": // Workers build shortcut
 		if progress != nil {
 			progress("Starting Workers build...")
 		}
@@ -51,7 +51,7 @@ func (h *Goflare) Change(newValue string, progress func(msgs ...any)) {
 
 func (h *Goflare) Shortcuts() []map[string]string {
 	return []map[string]string{
-		{h.config.BuildPageFunctionShortcut: "Build Cloudflare Functions Pages Files"},
-		{h.config.BuildWorkerShortcut: "Build Cloudflare Workers Files"},
+		{"f": "Build Cloudflare Functions Pages Files"},
+		{"w": "Build Cloudflare Workers Files"},
 	}
 }
