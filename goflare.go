@@ -1,6 +1,8 @@
 package goflare
 
 import (
+	"io"
+
 	"github.com/tinywasm/client"
 )
 
@@ -88,7 +90,7 @@ func (g *Goflare) Deploy(store Store) error {
 	return nil
 }
 
-func (g *Goflare) Auth(store Store) error {
+func (g *Goflare) Auth(store Store, prompt io.Reader) error {
 	// To be implemented in Stage 04
 	return nil
 }

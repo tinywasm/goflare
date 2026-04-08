@@ -33,7 +33,7 @@ See [docs/diagrams/goflare-generic.md](diagrams/goflare-generic.md)
 
 | Stage | Title | Status |
 |-------|-------|--------|
-| [01](stages/stage-01-foundation.md) | Foundation & Refactor | pending |
+| [01](stages/stage-01-foundation.md) | Foundation & Refactor | done |
 | [02](stages/stage-02-init.md) | Init Command | pending |
 | [03](stages/stage-03-build.md) | Build Command | pending |
 | [04](stages/stage-04-deploy-auth.md) | Deploy: Auth | pending |

@@ -4,8 +4,12 @@
 Restructure the package so all logic is testable, `Config` is the single source of truth,
 and the library/CLI boundary is clean.
 
-## Breaking Changes
-This stage is a full breaking change. All callers of the current `Config` struct must be updated.
+## Status: done
+
+Completed files: `goflare.go`, `config.go`, `store.go`, `workers.go`, `devtui.go`,
+`tests/pages_test.go`, `tests/helpers_test.go`. Package compiles cleanly.
+
+Note: `Auth` stub signature is `Auth(store Store, prompt io.Reader)` as required by Stage 04.
 
 ---
 

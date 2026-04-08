@@ -13,16 +13,18 @@ type Store interface {
 }
 
 // KeyringStore is the real implementation using go-keyring.
-type KeyringStore struct {
-	ProjectName string
-}
+// Keys are stored under the service name "goflare".
+// Use key format "goflare/<ProjectName>" to namespace per project.
+type KeyringStore struct{}
+
+func NewKeyringStore() *KeyringStore { return &KeyringStore{} }
 
 func (s *KeyringStore) Get(key string) (string, error) {
-	return keyring.Get("goflare/"+s.ProjectName, key)
+	return keyring.Get("goflare", key)
 }
 
 func (s *KeyringStore) Set(key, value string) error {
-	return keyring.Set("goflare/"+s.ProjectName, key, value)
+	return keyring.Set("goflare", key, value)
 }
 
 // MemoryStore is an in-memory Store exported for use by library consumers in tests.
