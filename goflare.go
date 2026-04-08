@@ -1,6 +1,9 @@
 package goflare
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/tinywasm/client"
 )
 
@@ -25,9 +28,10 @@ type Config struct {
 }
 
 type Goflare struct {
-	tw     *client.WasmClient
-	Config *Config // exported so CLI can read it after LoadConfigFromEnv
-	log    func(message ...any)
+	tw      *client.WasmClient
+	Config  *Config // exported so CLI can read it after LoadConfigFromEnv
+	log     func(message ...any)
+	BaseURL string
 }
 
 // New creates a new Goflare instance with the provided configuration
@@ -51,8 +55,9 @@ func New(cfg *Config) *Goflare {
 	tw.Change(cfg.CompilerMode)
 
 	return &Goflare{
-		tw:     tw,
-		Config: cfg,
+		tw:      tw,
+		Config:  cfg,
+		BaseURL: cfAPIBase,
 	}
 }
 
@@ -78,17 +83,24 @@ func (g *Goflare) SetCompilerMode(newValue string) {
 	}
 }
 
-func (g *Goflare) Build() error {
-	// To be implemented in Stage 03
-	return nil
-}
-
 func (g *Goflare) Deploy(store Store) error {
-	// To be implemented in Stage 05/06
-	return nil
-}
+	var buildErrors []error
 
-func (g *Goflare) Auth(store Store) error {
-	// To be implemented in Stage 04
+	if g.Config.Entry != "" {
+		if err := g.DeployWorker(store); err != nil {
+			buildErrors = append(buildErrors, fmt.Errorf("worker deploy failed: %w", err))
+		}
+	}
+
+	if g.Config.PublicDir != "" {
+		if err := g.DeployPages(store); err != nil {
+			buildErrors = append(buildErrors, fmt.Errorf("pages deploy failed: %w", err))
+		}
+	}
+
+	if len(buildErrors) > 0 {
+		return errors.Join(buildErrors...)
+	}
+
 	return nil
 }
