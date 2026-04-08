@@ -117,11 +117,10 @@ flowchart TD
 
     subgraph DEPS ["Go-only Dependencies"]
         direction LR
-        D1["cloudflare-go or direct HTTP"]:::sdk
+        D1["cfClient direct HTTP - baseURL injectable for tests"]:::sdk
         D2["go-keyring OS secrets"]:::key
         D3["bufio.Scanner stdlib .env parser"]:::env
-        D4["embed.FS JS templates"]:::output
-        D5["tinywasm/client WASM build + JS templates"]:::compile
-        D6["archive/zip stdlib ZIP upload"]:::output
+        D4["tinywasm/client WASM build + JS templates"]:::compile
+        D5["httptest.Server mock in tests"]:::output
     end
 ```
