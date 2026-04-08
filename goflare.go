@@ -3,6 +3,7 @@ package goflare
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 
 	"github.com/tinywasm/client"
 )
@@ -28,8 +29,9 @@ type Config struct {
 }
 
 type Goflare struct {
-	tw      *client.WasmClient
-	Config  *Config // exported so CLI can read it after LoadConfigFromEnv
+	tw      *client.WasmClient // Worker compiler (Entry)
+	twFront *client.WasmClient // Frontend compiler (web/client.go) — nil si no aplica
+	Config  *Config            // exported so CLI can read it after LoadConfigFromEnv
 	log     func(message ...any)
 	BaseURL string
 }
@@ -54,17 +56,37 @@ func New(cfg *Config) *Goflare {
 	tw.SetBuildOnDisk(true, false)
 	tw.Change(cfg.CompilerMode)
 
-	return &Goflare{
+	g := &Goflare{
 		tw:      tw,
 		Config:  cfg,
 		BaseURL: cfAPIBase,
 	}
+
+	// If PublicDir is present, create a client to compile web/client.go.
+	// SourceDir is derived from the parent of PublicDir (e.g., "web/public" -> "web").
+	// Do not call Change() here — it triggers immediate compilation.
+	// Use SetMode() which only updates the internal state.
+	if cfg.PublicDir != "" {
+		frontSourceDir := filepath.Dir(cfg.PublicDir)
+		twFront := client.New(&client.Config{
+			SourceDir: func() string { return frontSourceDir },
+			OutputDir: func() string { return cfg.PublicDir },
+		})
+		twFront.SetBuildOnDisk(true, false)
+		twFront.SetMode(cfg.CompilerMode)
+		g.twFront = twFront
+	}
+
+	return g
 }
 
 func (g *Goflare) SetLog(f func(message ...any)) {
 	g.log = f
 	if g.tw != nil {
 		g.tw.SetLog(f)
+	}
+	if g.twFront != nil {
+		g.twFront.SetLog(f)
 	}
 }
 

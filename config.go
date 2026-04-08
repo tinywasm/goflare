@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -109,5 +110,12 @@ func (c *Config) applyDefaults() {
 	}
 	if c.CompilerMode == "" {
 		c.CompilerMode = "S"
+	}
+
+	// Auto-detect Worker entry if worker/main.go exists and Entry is not configured.
+	if c.Entry == "" {
+		if _, err := os.Stat(filepath.Join("worker", "main.go")); err == nil {
+			c.Entry = "worker"
+		}
 	}
 }
