@@ -7,13 +7,8 @@ import (
 )
 
 func (g *Goflare) generateWorkerFile() error {
-	destPath := filepath.Join(g.Config.OutputDir, "_worker.js")
-
-	// Create output directory if it doesn't exist
-	outputDir := filepath.Dir(destPath)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return fmt.Errorf("failed to create output directory: %w", err)
-	}
+	workerJsPath := filepath.Join(g.Config.OutputDir, "worker.js")
+	wasmExecPath := filepath.Join(g.Config.OutputDir, "wasm_exec.js")
 
 	// Read wasm_exec.js content
 	wasmExecContent, err := g.tw.GetSSRClientInitJS("", "")
@@ -21,48 +16,27 @@ func (g *Goflare) generateWorkerFile() error {
 		return fmt.Errorf("failed to get wasm_exec content: %w", err)
 	}
 
-	// Read and modify runtime.mjs content
-	runtimeContent := g.runtimeMjs()
+	if err := os.WriteFile(wasmExecPath, []byte(wasmExecContent), 0644); err != nil {
+		return fmt.Errorf("failed to write wasm_exec.js: %w", err)
+	}
 
 	// Read worker template
 	workerTemplate := g.getWorkerMjs()
 
-	// Combine all content: wasm_exec.js + runtime.mjs + worker logic
-	combinedContent := string(wasmExecContent) + "\n\n" + string(runtimeContent) + "\n\n" + string(workerTemplate)
-
-	// Write the combined file
-	err = os.WriteFile(destPath, []byte(combinedContent), 0644)
-	if err != nil {
-		return fmt.Errorf("failed to write combined worker file: %w", err)
+	if err := os.WriteFile(workerJsPath, []byte(workerTemplate), 0644); err != nil {
+		return fmt.Errorf("failed to write worker.js: %w", err)
 	}
 
 	return nil
 }
 
-// runtimeMjs returns the runtime code,load wasm file for inline use (no ES6 imports)
-// This version is for combining into a single _worker.js file
-func (g *Goflare) runtimeMjs() string {
-	return fmt.Sprintf(`// Runtime functions - inline version
-import { connect } from "cloudflare:sockets";
-import mod from "./worker.wasm";
-
-async function loadModule() {
-  return mod;
-}
-
-function createRuntimeContext({ env, ctx, binding }) {
-  return {
-    env,
-    ctx,
-    connect,
-    binding,
-  };
-}`)
-}
-
 func (g *Goflare) getWorkerMjs() string {
 	return `// Worker logic
-let mod;
+import "./wasm_exec.js";
+import mod from "./worker.wasm";
+
+let instance;
+let go;
 
 globalThis.tryCatch = (fn) => {
   try {
@@ -76,58 +50,46 @@ globalThis.tryCatch = (fn) => {
   }
 };
 
-async function run(ctx) {
-  if (mod === undefined) {
-    mod = await loadModule();
-  }
-  const go = new Go();
-
-  let ready;
-  const readyPromise = new Promise((resolve) => {
-    ready = resolve;
-  });
-  const instance = new WebAssembly.Instance(mod, {
-    ...go.importObject,
-    workers: {
-      ready: () => {
-        ready();
+async function init() {
+  if (!instance) {
+    go = new Go();
+    let ready;
+    const readyPromise = new Promise((resolve) => {
+      ready = resolve;
+    });
+    instance = await WebAssembly.instantiate(mod, {
+      ...go.importObject,
+      workers: {
+        ready: () => {
+          ready();
+        },
       },
-    },
-  });
-  go.run(instance, ctx);
-  await readyPromise;
+    });
+    // Start the Go runtime. It will call workers.ready() when initialized.
+    go.run(instance);
+    await readyPromise;
+  }
 }
 
 async function fetch(req, env, ctx) {
-  const binding = {};
-  await run(createRuntimeContext({ env, ctx, binding }));
-  return binding.handleRequest(req);
-}
+  await init();
 
-async function scheduled(event, env, ctx) {
   const binding = {};
-  await run(createRuntimeContext({ env, ctx, binding }));
-  return binding.runScheduler(event);
-}
+  // The Go side is expected to have registered a handler that we can call.
+  // We pass the request-specific context (req, env, ctx, binding) to it.
+  if (globalThis.goflare && globalThis.goflare.handleRequest) {
+      return globalThis.goflare.handleRequest(req, env, ctx, binding);
+  }
 
-async function queue(batch, env, ctx) {
-  const binding = {};
-  await run(createRuntimeContext({ env, ctx, binding }));
-  return binding.handleQueueMessageBatch(batch);
-}
+  // Fallback for older/different implementations
+  if (binding.handleRequest) {
+      return binding.handleRequest(req);
+  }
 
-// onRequest handles request to Cloudflare Pages
-async function onRequest(ctx) {
-  const binding = {};
-  const { request, env } = ctx;
-  await run(createRuntimeContext({ env, ctx, binding }));
-  return binding.handleRequest(request);
+  return new Response("Go WASM handler not found", { status: 500 });
 }
 
 export default {
   fetch,
-  scheduled,
-  queue,
-  onRequest,
 };`
 }

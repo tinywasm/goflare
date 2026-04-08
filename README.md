@@ -1,110 +1,115 @@
 # GoFlare
-<img src="docs/img/badges.svg">
 
-**GoFlare** is a lightweight and flexible handler designed to help you build and deploy **Go-based WebAssembly (WASM)** and **JavaScript** bundles for **Cloudflare Workers**, **Pages**, or **Functions**.
-
-It’s not a full framework — GoFlare is meant to **fit into your existing toolchain**.
-You can use it as a standalone build step or attach it to any build or deploy workflow you already have.
+**GoFlare** is a self-contained Go tool (library + CLI) for deploying Go WASM projects to Cloudflare Workers and Pages. No Node.js, no Wrangler, no GitHub Actions. Pure Go, direct Cloudflare API.
 
 ---
 
 ## 🚀 Features
 
-* **Go → WASM/JS** conversion made simple
-* **Compatible with Cloudflare’s edge platforms** (Workers, Pages, and Functions)
-* **Integrates easily** with CI/CD pipelines or other Go tools
-* **Minimal dependencies** and **lightweight footprint**
-* Provides a **unified handler interface** to hook into other builders or deployment systems
+* **Zero Dependencies:** No Node.js or Wrangler required.
+* **Go → WASM/JS:** Seamlessly compiles Go to WASM for the edge.
+* **Dual Target:** Supports both Cloudflare Workers and Cloudflare Pages.
+* **Direct Upload:** Uses Cloudflare's Direct Upload v2 API for Pages.
+* **Secure Auth:** Uses the system keyring to store your Cloudflare API token.
+* **Pure Go:** Entirely written in Go.
 
 ---
 
-## 🧩 Example Usage
+## 💻 CLI Usage
 
-### Basic Usage
-
-```go
-import "github.com/tinywasm/goflare"
-
-func main() {
-	// Create a new Goflare instance with default configuration
-	g := goflare.New(nil)
-	
-	// Generate Cloudflare Pages files
-	err := g.GeneratePagesFiles()
-	if err != nil {
-		panic(err)
-	}
-}
+Install the CLI:
+```bash
+go install github.com/tinywasm/goflare/cmd/goflare@latest
 ```
 
-### Custom Configuration
-
-```go
-config := &goflare.Config{
-	AppRootDir:              ".",
-	RelativeInputDirectory:  "web",
-	RelativeOutputDirectory: "deploy/cloudflare",
-	MainInputFile:           "main.worker.go",
-	OutputWasmFileName:      "worker.wasm",
-	Logger:                  func(msg ...any) { fmt.Println(msg...) },
-}
-
-g := goflare.New(config)
+### 1. Initialize
+Set up your project and create a `.env` file with necessary configurations.
+```bash
+goflare init
 ```
 
-### Using with DevTUI (HandlerExecution Interface)
+### 2. Build
+Compile your Go code to WASM and prepare assets.
+```bash
+goflare build
+```
 
-GoFlare provides handlers that implement the `HandlerExecution` interface for integration with interactive TUI applications:
+### 3. Deploy
+Push your project to Cloudflare.
+```bash
+goflare deploy
+```
+
+---
+
+## 📚 Library Usage
+
+GoFlare can also be used as a library in your own Go tools.
 
 ```go
 import (
-	"github.com/tinywasm/goflare"
-	"github.com/tinywasm/devtui"
+    "os"
+    "github.com/tinywasm/goflare"
 )
 
 func main() {
-	g := goflare.New(nil)
-	
-	// Create execution handlers
-	buildPagesHandler := g.NewBuildPagesHandler()
-	buildWorkersHandler := g.NewBuildWorkersHandler()
-	fastModeHandler := g.NewSetCompilerModeHandler("f")  // Fast/Go
-	debugModeHandler := g.NewSetCompilerModeHandler("b") // Debug/TinyGo
-	prodModeHandler := g.NewSetCompilerModeHandler("m")  // Production/TinyGo
-	
-	// Register handlers with DevTUI
-	tui := devtui.New()
-	tui.AddField(buildPagesHandler)
-	tui.AddField(buildWorkersHandler)
-	tui.AddField(fastModeHandler)
-	tui.AddField(debugModeHandler)
-	tui.AddField(prodModeHandler)
-	
-	// Run the TUI
-	if err := tui.Run(); err != nil {
-		panic(err)
-	}
-}
-```
+    cfg := &goflare.Config{
+        ProjectName: "myapp",
+        AccountID:   "abc1234567890",
+        Entry:       "cmd/worker/main.go",
+        PublicDir:   "public",
+    }
 
-#### Available Handlers
+    g := goflare.New(cfg)
 
-- **`NewBuildPagesHandler()`** - Builds Cloudflare Pages files (_worker.js + WASM)
-- **`NewBuildWorkersHandler()`** - Builds Cloudflare Workers files
-- **`NewSetCompilerModeHandler(mode)`** - Changes compiler mode:
-  - `"f"` - Fast mode (Go compiler)
-  - `"b"` - Debug mode (TinyGo with debug symbols)
-  - `"m"` - Production mode (TinyGo optimized)
+    // Build
+    if err := g.Build(); err != nil {
+        panic(err)
+    }
 
-All handlers implement the `HandlerExecution` interface:
-```go
-type HandlerExecution interface {
-    Name() string                       // Identifier for logging
-    Label() string                      // Button label
-    Execute(progress func(msgs ...any)) // Execute operation with progress callback
+    // Deploy
+    store := goflare.NewKeyringStore()
+    if err := g.Auth(store, os.Stdin); err != nil {
+        panic(err)
+    }
+
+    if err := g.DeployWorker(store); err != nil {
+        panic(err)
+    }
+
+    if err := g.DeployPages(store); err != nil {
+        panic(err)
+    }
 }
 ```
 
 ---
 
-## [Contributing](https://github.com/tinywasm/cdvelop/blob/main/CONTRIBUTING.md)
+## ⚙️ Configuration
+
+Configuration is primarily loaded from a `.env` file or environment variables.
+
+| Field | .env Key | Default | Required | Description |
+|-------|----------|---------|----------|-------------|
+| `ProjectName` | `PROJECT_NAME` | - | Yes | Unique name for your project |
+| `AccountID` | `CLOUDFLARE_ACCOUNT_ID` | - | Yes | Your Cloudflare Account ID |
+| `WorkerName` | `WORKER_NAME` | `<ProjectName>-worker` | No | Name of the Worker script |
+| `Domain` | `DOMAIN` | - | No | Custom domain for Pages |
+| `Entry` | `ENTRY` | - | No* | Path to main Go file for Worker |
+| `PublicDir` | `PUBLIC_DIR` | - | No* | Path to static assets for Pages |
+| `CompilerMode` | `COMPILER_MODE` | `S` | No | `S` (Small), `M` (Medium), `L` (Large) |
+
+*\*At least one of `ENTRY` or `PUBLIC_DIR` must be provided.*
+
+---
+
+## 🛠️ Requirements
+
+* Go 1.25.2+
+* [TinyGo](https://tinygo.org/) in your `PATH` (for Worker builds)
+
+---
+
+## 📝 License
+
+Distributed under the MIT License. See `LICENSE` for more information.

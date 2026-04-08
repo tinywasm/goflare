@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -8,28 +9,34 @@ import (
 )
 
 func main() {
-	config, err := goflare.LoadConfigFromEnv(".env")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
+	if len(os.Args) < 2 {
+		fmt.Fprint(os.Stderr, goflare.Usage())
 		os.Exit(1)
 	}
 
-	// For Stage 01, we just want it to compile.
-	// CLI wiring will be done in Stage 07.
-	// Let's just make it a minimal placeholder that uses the new API.
+	fs := flag.NewFlagSet(os.Args[1], flag.ExitOnError)
+	env := fs.String("env", ".env", "path to .env file")
 
-	if config.ProjectName == "" {
-		fmt.Println("Goflare CLI - Stage 01")
-		fmt.Println("Usage: PROJECT_NAME=my-project CLOUDFLARE_ACCOUNT_ID=... goflare")
-		return
+	if err := fs.Parse(os.Args[2:]); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
-	g := goflare.New(config)
-	g.SetLog(func(messages ...any) {
-		for _, msg := range messages {
-			fmt.Println(msg)
-		}
-	})
+	var err error
+	switch os.Args[1] {
+	case "init":
+		err = goflare.RunInit(*env, os.Stdin, os.Stdout)
+	case "build":
+		err = goflare.RunBuild(*env, os.Stdout)
+	case "deploy":
+		err = goflare.RunDeploy(*env, os.Stdin, os.Stdout)
+	default:
+		fmt.Fprint(os.Stderr, goflare.Usage())
+		os.Exit(1)
+	}
 
-	fmt.Println("Goflare: Foundation active.")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
