@@ -40,7 +40,7 @@ GoFlare is a Go library and CLI that bridges the gap between Go source code and 
 - **Memory Store:** An exported `MemoryStore` is provided for testing and library consumers.
 
 ### 3. Build Pipeline (`build.go`)
-- **Worker Build:** Produces `worker.js`, `worker.wasm`, and `wasm_exec.js`.
+- **Worker Build:** Produces `edge.js` (bundled) and `edge.wasm`.
 - **Pages Build:** Copies static assets to `dist/` directory.
 - **Orchestration:** `Build()` method detects which targets to build based on configuration.
 
@@ -73,7 +73,7 @@ goflare/
 
 ## Design Principles
 
-- **Convention over Configuration:** Default output directory is fixed to `.goflare/`.
+- **Convention over Configuration:** Default output directory is fixed to `.build/`.
 - **Minimal Dependencies:** Prefers Go standard library; uses `tinywasm/client` for WASM.
 - **Testability:** Internal HTTP client supports base URL injection for mock server testing.
 - **Self-Contained:** No external tools like Node.js or Wrangler required.

@@ -57,7 +57,7 @@ func main() {
     cfg := &goflare.Config{
         ProjectName: "myapp",
         AccountID:   "abc1234567890",
-        Entry:       "cmd/worker/main.go",
+        Entry:       "edge/main.go",
         PublicDir:   "public",
     }
 
@@ -114,7 +114,6 @@ my-project/
 - Edge function: always `edge/main.go` (auto-detected — no `ENTRY` needed)
 - Build output: always `.build/`
 
-> **Backwards compatible:** `worker/main.go` is also auto-detected as a fallback for existing projects.
 
 ---
 

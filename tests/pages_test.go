@@ -38,7 +38,7 @@ func main() {}
 		ProjectName: "test-project",
 		AccountID:   "test-account",
 		Entry:       webDir,
-		OutputDir:   filepath.Join(tmpDir, ".goflare/"),
+		OutputDir:   filepath.Join(tmpDir, ".build/"),
 	}
 	g := goflare.New(cfg)
 

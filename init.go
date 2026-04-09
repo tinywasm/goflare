@@ -42,15 +42,15 @@ func Init(in io.Reader, out io.Writer) (*Config, error) {
 		return nil, err
 	}
 
-	// Only ask for Entry if worker/main.go does not exist
-	if _, err := os.Stat(filepath.Join("worker", "main.go")); os.IsNotExist(err) {
-		cfg.Entry, err = ask("Entry point (Worker dir, leave empty for Pages-only) [worker]:", false)
+	// Only ask for Entry if edge/main.go does not exist
+	if _, err := os.Stat(filepath.Join("edge", "main.go")); err == nil {
+		fmt.Fprintln(out, "  → edge/main.go detected, Entry set to \"edge\" automatically")
+		cfg.Entry = "edge"
+	} else {
+		cfg.Entry, err = ask("Entry point (edge function dir, leave empty for Pages-only) [edge]:", false)
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		fmt.Fprintln(out, "  → worker/main.go detected, Entry set to \"worker\" automatically")
-		cfg.Entry = "worker"
 	}
 
 	cfg.PublicDir, err = ask("Public dir (leave empty for Worker-only) [web/public]:", false)
@@ -117,7 +117,7 @@ func UpdateGitignore(dir string) error {
 		content = string(b)
 	}
 
-	entries := []string{".env", ".goflare/"}
+	entries := []string{".env", ".build/"}
 	modified := false
 
 	lines := strings.Split(content, "\n")

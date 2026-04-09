@@ -6,20 +6,18 @@ GoFlare enables you to run Go applications on Cloudflare Workers by compiling th
 
 When `ENTRY` is set in your configuration, `goflare build` will:
 
-1. Compile your Go source code to WASM using `tinywasm` (delegating to `tinygo` or `go`).
-2. Generate `worker.js`, which serves as the entry point for the Cloudflare Worker.
-3. Prepare `wasm_exec.js`, the standard Go/WASM bridge.
-4. Output all artifacts to the `.goflare/` directory.
+1. Compile your Go source code to WASM using `tinywasm` (delegating to `tinygo`).
+2. Generate `edge.js`, which bundles the entry point, runtime, and `wasm_exec.js`.
+3. Output all artifacts to the `.build/` directory.
 
 ## Deployment
 
 Deployment is done via a multipart upload to the Cloudflare Workers API.
 
 ### Upload Fields
-- **`metadata`**: A JSON object specifying the `main_module` (e.g., `worker.js`).
-- **`worker.js`**: The JavaScript wrapper script.
-- **`worker.wasm`**: The compiled WebAssembly binary.
-- **`wasm_exec.js`**: The Go WASM runtime support.
+- **`metadata`**: A JSON object specifying the `main_module` (`edge.js`).
+- **`edge.js`**: The bundled JavaScript wrapper script.
+- **`edge.wasm`**: The compiled WebAssembly binary.
 
 ## workers.dev Only
 

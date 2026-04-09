@@ -6,8 +6,8 @@ GoFlare supports deploying static sites and "Advanced Mode" Pages projects (whic
 
 When `PUBLIC_DIR` is set in your configuration, `goflare build` will:
 
-1. Create a `.goflare/dist/` directory.
-2. Recursively copy all files from your `PUBLIC_DIR` to `.goflare/dist/`.
+1. Create a `.build/dist/` directory.
+2. Recursively copy all files from your `PUBLIC_DIR` to `.build/dist/`.
 3. If `ENTRY` is also set, the Worker build artifacts will also be prepared.
 
 ## Content Type Detection

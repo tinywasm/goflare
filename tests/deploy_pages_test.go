@@ -17,7 +17,7 @@ func TestDeployPages_FullFlow(t *testing.T) {
 	}
 	defer cleanup()
 
-	outputDir := filepath.Join(tmpDir, ".goflare")
+	outputDir := filepath.Join(tmpDir, ".build")
 	distDir := filepath.Join(outputDir, "dist")
 	os.MkdirAll(distDir, 0755)
 	os.WriteFile(filepath.Join(distDir, "index.html"), []byte("<h1>Hello</h1>"), 0644)

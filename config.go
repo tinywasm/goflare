@@ -106,16 +106,16 @@ func (c *Config) applyDefaults() {
 		c.WorkerName = c.ProjectName + "-worker"
 	}
 	if c.OutputDir == "" {
-		c.OutputDir = ".goflare/"
+		c.OutputDir = ".build/" // was: ".goflare/"
 	}
 	if c.CompilerMode == "" {
 		c.CompilerMode = "S"
 	}
 
-	// Auto-detect Worker entry if worker/main.go exists and Entry is not configured.
+	// Auto-detect edge function entry.
 	if c.Entry == "" {
-		if _, err := os.Stat(filepath.Join("worker", "main.go")); err == nil {
-			c.Entry = "worker"
+		if _, err := os.Stat(filepath.Join("edge", "main.go")); err == nil {
+			c.Entry = "edge"
 		}
 	}
 }
