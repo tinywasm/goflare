@@ -68,16 +68,22 @@ func (g *Goflare) buildPages() error {
 	// 2. Compile frontend WASM if web/client.go exists
 	frontEntry := filepath.Join("web", "client.go")
 	if _, err := os.Stat(frontEntry); err == nil {
-		if g.twFront == nil {
-			return fmt.Errorf("frontend compiler not initialized (twFront is nil)")
+		if g.browserCompiler == nil {
+			return fmt.Errorf("frontend compiler not initialized (browserCompiler is nil)")
 		}
 		g.Logger("compiling frontend WASM: web/client.go →", g.Config.PublicDir)
-		if err := g.twFront.Compile(); err != nil {
+		if err := g.browserCompiler.Compile(); err != nil {
 			return fmt.Errorf("frontend WASM compilation failed: %w", err)
 		}
 	}
 
-	// 3. Copy PUBLIC_DIR -> .build/dist/
+	// 3. Generate script.js + style.css via assetmin
+	if g.assetMin != nil {
+		g.Logger("generating assets: script.js, style.css →", g.Config.PublicDir)
+		g.assetMin.SetBuildOnDisk(true)
+	}
+
+	// 4. Copy PUBLIC_DIR -> .build/dist/
 	distDir := filepath.Join(g.Config.OutputDir, "dist")
 	if err := os.MkdirAll(distDir, 0755); err != nil {
 		return fmt.Errorf("failed to create dist directory: %w", err)

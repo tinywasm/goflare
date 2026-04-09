@@ -6,9 +6,11 @@ GoFlare supports deploying static sites and "Advanced Mode" Pages projects (whic
 
 When `PUBLIC_DIR` is set in your configuration, `goflare build` will:
 
-1. Create a `.build/dist/` directory.
-2. Recursively copy all files from your `PUBLIC_DIR` to `.build/dist/`.
-3. If `ENTRY` is also set, the Worker build artifacts will also be prepared.
+1. **Verify PUBLIC_DIR:** Checks that the public directory exists.
+2. **Compile Frontend WASM:** If `web/client.go` exists, it compiles it to `PUBLIC_DIR/client.wasm`.
+3. **Generate Assets:** Uses `assetmin` to generate `script.js` and `style.css` in `PUBLIC_DIR`.
+4. **Prepare Dist:** Creates a `.build/dist/` directory and copies all files from `PUBLIC_DIR`.
+5. **Worker Integration:** If `ENTRY` is also set, the Worker build artifacts will also be prepared.
 
 ## Content Type Detection
 

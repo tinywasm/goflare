@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/tinywasm/assetmin"
 	"github.com/tinywasm/client"
 )
 
@@ -29,10 +30,11 @@ type Config struct {
 }
 
 type Goflare struct {
-	tw      *client.WasmClient // Worker compiler (Entry)
-	twFront *client.WasmClient // Frontend compiler (web/client.go) — nil si no aplica
-	Config  *Config            // exported so CLI can read it after LoadConfigFromEnv
-	log     func(message ...any)
+	edgeCompiler    *client.WasmClient // Worker compiler (Entry)
+	browserCompiler *client.WasmClient // Frontend compiler (web/client.go) — nil if it doesn't apply
+	assetMin        *assetmin.AssetMin // generates script.js + style.css — nil if no PublicDir
+	Config          *Config            // exported so CLI can read it after LoadConfigFromEnv
+	log             func(message ...any)
 	BaseURL string
 }
 
@@ -43,7 +45,7 @@ func New(cfg *Config) *Goflare {
 	}
 	cfg.applyDefaults()
 
-	tw := client.New(&client.Config{
+	edgeCompiler := client.New(&client.Config{
 		SourceDir: func() string {
 			if cfg.Entry != "" {
 				return cfg.Entry
@@ -53,13 +55,13 @@ func New(cfg *Config) *Goflare {
 		OutputDir: func() string { return cfg.OutputDir },
 	})
 
-	tw.SetBuildOnDisk(true, false)
-	tw.Change(cfg.CompilerMode)
+	edgeCompiler.SetBuildOnDisk(true, false)
+	edgeCompiler.Change(cfg.CompilerMode)
 
 	g := &Goflare{
-		tw:      tw,
-		Config:  cfg,
-		BaseURL: cfAPIBase,
+		edgeCompiler: edgeCompiler,
+		Config:       cfg,
+		BaseURL:      cfAPIBase,
 	}
 
 	// If PublicDir is present, create a client to compile web/client.go.
@@ -68,13 +70,20 @@ func New(cfg *Config) *Goflare {
 	// Use SetMode() which only updates the internal state.
 	if cfg.PublicDir != "" {
 		frontSourceDir := filepath.Dir(cfg.PublicDir)
-		twFront := client.New(&client.Config{
+		browserCompiler := client.New(&client.Config{
 			SourceDir: func() string { return frontSourceDir },
 			OutputDir: func() string { return cfg.PublicDir },
 		})
-		twFront.SetBuildOnDisk(true, false)
-		twFront.SetMode(cfg.CompilerMode)
-		g.twFront = twFront
+		browserCompiler.SetBuildOnDisk(true, false)
+		browserCompiler.SetMode(cfg.CompilerMode)
+		g.browserCompiler = browserCompiler
+
+		g.assetMin = assetmin.NewAssetMin(&assetmin.Config{
+			OutputDir: cfg.PublicDir,
+			GetSSRClientInitJS: func() (string, error) {
+				return browserCompiler.GetSSRClientInitJS()
+			},
+		})
 	}
 
 	return g
@@ -82,11 +91,14 @@ func New(cfg *Config) *Goflare {
 
 func (g *Goflare) SetLog(f func(message ...any)) {
 	g.log = f
-	if g.tw != nil {
-		g.tw.SetLog(f)
+	if g.edgeCompiler != nil {
+		g.edgeCompiler.SetLog(f)
 	}
-	if g.twFront != nil {
-		g.twFront.SetLog(f)
+	if g.browserCompiler != nil {
+		g.browserCompiler.SetLog(f)
+	}
+	if g.assetMin != nil {
+		g.assetMin.SetLog(f)
 	}
 }
 
@@ -100,8 +112,8 @@ func (g *Goflare) Logger(messages ...any) {
 // mode: "L" (Large fast/Go), "M" (Medium TinyGo debug), "S" (Small TinyGo production)
 func (g *Goflare) SetCompilerMode(newValue string) {
 	g.Config.CompilerMode = newValue
-	if g.tw != nil {
-		g.tw.Change(newValue)
+	if g.edgeCompiler != nil {
+		g.edgeCompiler.Change(newValue)
 	}
 }
 
