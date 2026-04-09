@@ -21,7 +21,7 @@ func TestBuild_PagesOnly(t *testing.T) {
 	os.MkdirAll(filepath.Join(publicDir, "assets"), 0755)
 	os.WriteFile(filepath.Join(publicDir, "assets", "style.css"), []byte("body {}"), 0644)
 
-	outputDir := filepath.Join(tmpDir, ".goflare")
+	outputDir := filepath.Join(tmpDir, ".build")
 
 	cfg := &goflare.Config{
 		ProjectName: "test",

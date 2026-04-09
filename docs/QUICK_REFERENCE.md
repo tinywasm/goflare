@@ -5,7 +5,7 @@
 | Command | Description |
 |---------|-------------|
 | `goflare init` | Interactive project setup. Creates `.env` and updates `.gitignore`. |
-| `goflare build` | Compiles WASM and prepares static assets in `.goflare/`. |
+| `goflare build` | Compiles WASM and prepares static assets in `.build/`. |
 | `goflare deploy` | Authenticates and pushes artifacts to Cloudflare. |
 
 ## Configuration (.env)

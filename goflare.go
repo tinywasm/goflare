@@ -21,8 +21,8 @@ type Config struct {
 	Entry     string // ENTRY      (path to main Go file, empty = Pages only)
 	PublicDir string // PUBLIC_DIR (path to static assets, empty = Worker only)
 
-	// Build output (not in .env — always .goflare/)
-	OutputDir string // default: ".goflare/"
+	// Build output (not in .env — always .build/)
+	OutputDir string // default: ".build/"
 
 	// Compiler
 	CompilerMode string // "S" | "M" | "L"  default: "S"

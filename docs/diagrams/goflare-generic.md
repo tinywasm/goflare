@@ -32,7 +32,7 @@ flowchart TD
         VALIDATE_INIT -->|Yes| ERR_INIT["Error: at least one of ENTRY or PUBLIC_DIR required"]:::error
         VALIDATE_INIT -->|No| WRITE_ENV["Write .env"]:::env
         WRITE_ENV --> GI_CHECK{"Is .env in .gitignore?"}:::detect
-        GI_CHECK -->|No| GI_ADD["Add .env and .goflare/ to .gitignore"]:::output
+        GI_CHECK -->|No| GI_ADD["Add .env and .build/ to .gitignore"]:::output
         GI_CHECK -->|Yes| INIT_DONE["Init complete"]:::output
         GI_ADD --> INIT_DONE
     end
@@ -48,17 +48,17 @@ flowchart TD
         BOTH_EMPTY -->|Yes| ERR_EMPTY["Error: nothing to build"]:::error
         BOTH_EMPTY -->|No| HAS_BACK{"ENTRY set?"}:::detect
 
-        HAS_BACK -->|Yes| TINYGO["tinygo build -target=wasi -o .goflare/worker.wasm ENTRY"]:::compile
+        HAS_BACK -->|Yes| TINYGO["tinygo build -target=wasi -o .build/edge.wasm ENTRY"]:::compile
         HAS_BACK -->|No| SKIP_W["Worker: skip"]:::detect
 
         TINYGO -->|Error| ERR_BUILD["Error: tinygo build failed"]:::error
-        TINYGO -->|OK| GEN_JS["Generate embedded JS: .goflare/worker.js, .goflare/wasm_exec.js"]:::compile
+        TINYGO -->|OK| GEN_JS["Generate bundled + minified JS: .build/edge.js"]:::compile
 
         SCAN --> HAS_FRONT{"PUBLIC_DIR set?"}:::detect
-        HAS_FRONT -->|Yes| COPY_DIST["Copy PUBLIC_DIR to .goflare/dist/"]:::front
+        HAS_FRONT -->|Yes| COPY_DIST["Copy PUBLIC_DIR to .build/dist/"]:::front
         HAS_FRONT -->|No| SKIP_P["Pages: skip"]:::detect
 
-        GEN_JS --> BUILD_DONE["Build complete - .goflare/ ready"]:::output
+        GEN_JS --> BUILD_DONE["Build complete - .build/ ready"]:::output
         COPY_DIST --> BUILD_DONE
         SKIP_W --> BUILD_DONE
         SKIP_P --> BUILD_DONE
@@ -76,15 +76,15 @@ flowchart TD
         TOK_VERIFY -->|Valid| TOK_SAVE["Save token: keyring goflare/PROJECT_NAME"]:::key
         TOK_SAVE --> TOK_OK
 
-        TOK_OK --> D_BUILD_CHECK{"Does .goflare/ exist?"}:::detect
+        TOK_OK --> D_BUILD_CHECK{"Does .build/ exist?"}:::detect
         D_BUILD_CHECK -->|No| AUTO_BUILD["Run build automatically"]:::compile
         D_BUILD_CHECK -->|Yes| D_TARGETS["Detect deploy targets"]:::detect
         AUTO_BUILD --> D_TARGETS
 
-        D_TARGETS --> D_HAS_WASM{"worker.wasm present?"}:::detect
+        D_TARGETS --> D_HAS_WASM{"edge.wasm present?"}:::detect
         D_TARGETS --> D_HAS_DIST{"dist/ present?"}:::detect
 
-        D_HAS_WASM -->|Yes| W_UPLOAD["PUT /workers/scripts/WORKER_NAME multipart: worker.js + worker.wasm + wasm_exec.js"]:::cf
+        D_HAS_WASM -->|Yes| W_UPLOAD["PUT /workers/scripts/WORKER_NAME multipart: edge.js + edge.wasm"]:::cf
         D_HAS_WASM -->|No| W_SKIP["Worker: skip"]:::detect
 
         W_UPLOAD -->|Error| W_ERR["Worker deploy failed - record error"]:::error

@@ -260,12 +260,10 @@ func (g *Goflare) DeployWorker(store Store) error {
 		return err
 	}
 
-	workerMjs := filepath.Join(g.Config.OutputDir, "worker.mjs")
-	runtimeMjs := filepath.Join(g.Config.OutputDir, "runtime.mjs")
-	workerWasm := filepath.Join(g.Config.OutputDir, "worker.wasm")
-	wasmExec := filepath.Join(g.Config.OutputDir, "wasm_exec.js")
+	edgeJs := filepath.Join(g.Config.OutputDir, "edge.js")
+	edgeWasm := filepath.Join(g.Config.OutputDir, "edge.wasm")
 
-	files := []string{workerMjs, runtimeMjs, workerWasm, wasmExec}
+	files := []string{edgeJs, edgeWasm}
 	for _, f := range files {
 		if _, err := os.Stat(f); os.IsNotExist(err) {
 			return fmt.Errorf("missing artifact: %s", filepath.Base(f))
@@ -276,29 +274,19 @@ func (g *Goflare) DeployWorker(store Store) error {
 	mw := multipart.NewWriter(&buf)
 
 	// metadata
-	metadata := map[string]string{"main_module": "worker.mjs"}
+	metadata := map[string]string{"main_module": "edge.js"}
 	metadataJSON, _ := json.Marshal(metadata)
 	if err := mw.WriteField("metadata", string(metadataJSON)); err != nil {
 		return err
 	}
 
-	// worker.mjs
-	if err := addFilePart(mw, "worker.mjs", workerMjs); err != nil {
+	// edge.js
+	if err := addFilePart(mw, "edge.js", edgeJs); err != nil {
 		return err
 	}
 
-	// runtime.mjs
-	if err := addFilePart(mw, "runtime.mjs", runtimeMjs); err != nil {
-		return err
-	}
-
-	// worker.wasm
-	if err := addFilePart(mw, "worker.wasm", workerWasm); err != nil {
-		return err
-	}
-
-	// wasm_exec.js
-	if err := addFilePart(mw, "wasm_exec.js", wasmExec); err != nil {
+	// edge.wasm
+	if err := addFilePart(mw, "edge.wasm", edgeWasm); err != nil {
 		return err
 	}
 
