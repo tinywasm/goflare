@@ -6,7 +6,7 @@ import (
 )
 
 func (g *Goflare) generateWasmFile() error {
-	if err := g.tw.RecompileMainWasm(); err != nil {
+	if err := g.edgeCompiler.RecompileMainWasm(); err != nil {
 		return err
 	}
 

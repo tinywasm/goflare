@@ -20,6 +20,17 @@
 | `PUBLIC_DIR` | (Optional) Path to static assets. |
 | `COMPILER_MODE` | `S` (Small), `M` (Medium), `L` (Large). |
 
+## Build Outputs (.build/)
+
+| File/Dir | Source | Description |
+|----------|--------|-------------|
+| `edge.js` | `edge/main.go` | Bundled & minified Worker script. |
+| `edge.wasm` | `edge/main.go` | Compiled Worker WASM binary. |
+| `dist/` | `web/public/` | Mirror of PublicDir for Pages upload. |
+| `dist/client.wasm` | `web/client.go` | Compiled frontend WASM. |
+| `dist/script.js` | (assetmin) | Minified WASM loader and app logic. |
+| `dist/style.css` | (assetmin) | Minified CSS bundle. |
+
 ## Common Scenarios
 
 ### Worker Only
