@@ -104,7 +104,7 @@ func WriteEnvFile(cfg *Config, path string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
 
-// UpdateGitignore reads .gitignore in dir. Appends .env and .goflare/ if not already present.
+// UpdateGitignore reads .gitignore in dir. Appends .env and .build/ if not already present.
 // Creates .gitignore if it does not exist.
 func UpdateGitignore(dir string) error {
 	path := filepath.Join(dir, ".gitignore")

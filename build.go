@@ -77,7 +77,7 @@ func (g *Goflare) buildPages() error {
 		}
 	}
 
-	// 3. Copy PUBLIC_DIR -> .goflare/dist/
+	// 3. Copy PUBLIC_DIR -> .build/dist/
 	distDir := filepath.Join(g.Config.OutputDir, "dist")
 	if err := os.MkdirAll(distDir, 0755); err != nil {
 		return fmt.Errorf("failed to create dist directory: %w", err)
