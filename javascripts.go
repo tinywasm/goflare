@@ -1,95 +1,41 @@
 package goflare
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
 )
 
+//go:embed assets/worker.mjs
+var embeddedWorkerMjs []byte
+
+//go:embed assets/runtime.mjs
+var embeddedRuntimeMjs []byte
+
+//go:embed assets/wasm_exec_worker.js
+var embeddedWasmExecWorker []byte
+
+// generateWorkerFile copies the three pre-built JS assets for a Cloudflare Worker
+// into OutputDir. Files are embedded at compile time — no generation needed.
+//
+//   - worker.mjs         — ES module entry, calls binding.handleRequest(req)
+//   - runtime.mjs        — loads worker.wasm, exposes createRuntimeContext
+//   - wasm_exec.js    — TinyGo runtime with context Proxy patch
 func (g *Goflare) generateWorkerFile() error {
-	workerJsPath := filepath.Join(g.Config.OutputDir, "worker.js")
-	wasmExecPath := filepath.Join(g.Config.OutputDir, "wasm_exec.js")
-
-	// Read wasm_exec.js content
-	wasmExecContent, err := g.tw.GetSSRClientInitJS("", "")
-	if err != nil {
-		return fmt.Errorf("failed to get wasm_exec content: %w", err)
+	files := []struct {
+		name string
+		data []byte
+	}{
+		{"worker.mjs", embeddedWorkerMjs},
+		{"runtime.mjs", embeddedRuntimeMjs},
+		{"wasm_exec.js", embeddedWasmExecWorker},
 	}
-
-	if err := os.WriteFile(wasmExecPath, []byte(wasmExecContent), 0644); err != nil {
-		return fmt.Errorf("failed to write wasm_exec.js: %w", err)
+	for _, f := range files {
+		dest := filepath.Join(g.Config.OutputDir, f.name)
+		if err := os.WriteFile(dest, f.data, 0644); err != nil {
+			return fmt.Errorf("failed to write %s: %w", f.name, err)
+		}
 	}
-
-	// Read worker template
-	workerTemplate := g.getWorkerMjs()
-
-	if err := os.WriteFile(workerJsPath, []byte(workerTemplate), 0644); err != nil {
-		return fmt.Errorf("failed to write worker.js: %w", err)
-	}
-
 	return nil
-}
-
-func (g *Goflare) getWorkerMjs() string {
-	return `// Worker logic
-import "./wasm_exec.js";
-import mod from "./worker.wasm";
-
-let instance;
-let go;
-
-globalThis.tryCatch = (fn) => {
-  try {
-    return {
-      result: fn(),
-    };
-  } catch (e) {
-    return {
-      error: e,
-    };
-  }
-};
-
-async function init() {
-  if (!instance) {
-    go = new Go();
-    let ready;
-    const readyPromise = new Promise((resolve) => {
-      ready = resolve;
-    });
-    instance = await WebAssembly.instantiate(mod, {
-      ...go.importObject,
-      workers: {
-        ready: () => {
-          ready();
-        },
-      },
-    });
-    // Start the Go runtime. It will call workers.ready() when initialized.
-    go.run(instance);
-    await readyPromise;
-  }
-}
-
-async function fetch(req, env, ctx) {
-  await init();
-
-  const binding = {};
-  // The Go side is expected to have registered a handler that we can call.
-  // We pass the request-specific context (req, env, ctx, binding) to it.
-  if (globalThis.goflare && globalThis.goflare.handleRequest) {
-      return globalThis.goflare.handleRequest(req, env, ctx, binding);
-  }
-
-  // Fallback for older/different implementations
-  if (binding.handleRequest) {
-      return binding.handleRequest(req);
-  }
-
-  return new Response("Go WASM handler not found", { status: 500 });
-}
-
-export default {
-  fetch,
-};`
 }

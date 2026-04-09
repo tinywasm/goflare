@@ -20,7 +20,8 @@ func TestDeployWorker_UploadScript(t *testing.T) {
 
 	outputDir := filepath.Join(tmpDir, ".goflare")
 	os.MkdirAll(outputDir, 0755)
-	os.WriteFile(filepath.Join(outputDir, "worker.js"), []byte("console.log('worker')"), 0644)
+	os.WriteFile(filepath.Join(outputDir, "worker.mjs"), []byte("console.log('worker')"), 0644)
+	os.WriteFile(filepath.Join(outputDir, "runtime.mjs"), []byte("runtime"), 0644)
 	os.WriteFile(filepath.Join(outputDir, "worker.wasm"), []byte("wasm"), 0644)
 	os.WriteFile(filepath.Join(outputDir, "wasm_exec.js"), []byte("wasm_exec"), 0644)
 
@@ -36,8 +37,8 @@ func TestDeployWorker_UploadScript(t *testing.T) {
 			}
 			var metadata map[string]string
 			json.Unmarshal([]byte(r.FormValue("metadata")), &metadata)
-			if metadata["main_module"] != "worker.js" {
-				t.Errorf("Expected main_module worker.js, got %s", metadata["main_module"])
+			if metadata["main_module"] != "worker.mjs" {
+				t.Errorf("Expected main_module worker.mjs, got %s", metadata["main_module"])
 			}
 
 			w.WriteHeader(http.StatusOK)
@@ -76,7 +77,7 @@ func TestDeployWorker_MissingArtifact(t *testing.T) {
 	outputDir := filepath.Join(tmpDir, ".goflare")
 	os.MkdirAll(outputDir, 0755)
 	// Only one file
-	os.WriteFile(filepath.Join(outputDir, "worker.js"), []byte("console.log('worker')"), 0644)
+	os.WriteFile(filepath.Join(outputDir, "worker.mjs"), []byte("console.log('worker')"), 0644)
 
 	store := goflare.NewMemoryStore()
 	store.Set("goflare/test-project", "valid-token")

@@ -260,11 +260,12 @@ func (g *Goflare) DeployWorker(store Store) error {
 		return err
 	}
 
-	workerJs := filepath.Join(g.Config.OutputDir, "worker.js")
+	workerMjs := filepath.Join(g.Config.OutputDir, "worker.mjs")
+	runtimeMjs := filepath.Join(g.Config.OutputDir, "runtime.mjs")
 	workerWasm := filepath.Join(g.Config.OutputDir, "worker.wasm")
 	wasmExec := filepath.Join(g.Config.OutputDir, "wasm_exec.js")
 
-	files := []string{workerJs, workerWasm, wasmExec}
+	files := []string{workerMjs, runtimeMjs, workerWasm, wasmExec}
 	for _, f := range files {
 		if _, err := os.Stat(f); os.IsNotExist(err) {
 			return fmt.Errorf("missing artifact: %s", filepath.Base(f))
@@ -275,14 +276,19 @@ func (g *Goflare) DeployWorker(store Store) error {
 	mw := multipart.NewWriter(&buf)
 
 	// metadata
-	metadata := map[string]string{"main_module": "worker.js"}
+	metadata := map[string]string{"main_module": "worker.mjs"}
 	metadataJSON, _ := json.Marshal(metadata)
 	if err := mw.WriteField("metadata", string(metadataJSON)); err != nil {
 		return err
 	}
 
-	// worker.js
-	if err := addFilePart(mw, "worker.js", workerJs); err != nil {
+	// worker.mjs
+	if err := addFilePart(mw, "worker.mjs", workerMjs); err != nil {
+		return err
+	}
+
+	// runtime.mjs
+	if err := addFilePart(mw, "runtime.mjs", runtimeMjs); err != nil {
 		return err
 	}
 

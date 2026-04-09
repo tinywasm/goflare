@@ -40,6 +40,39 @@ func TestInit_PromptsAndReturnsConfig(t *testing.T) {
 	}
 }
 
+func TestInit_AutoDetect(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "goflare-test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	oldWd, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(oldWd)
+
+	os.MkdirAll("worker", 0755)
+	os.WriteFile(filepath.Join("worker", "main.go"), []byte("package main"), 0644)
+
+	// In this case, it should skip the Entry prompt.
+	// Input: ProjectName, AccountID, Domain, PublicDir, WorkerName
+	input := "my-project\nmy-account\nexample.com\nweb/public\nmy-worker\n"
+	in := strings.NewReader(input)
+	out := &bytes.Buffer{}
+
+	cfg, err := goflare.Init(in, out)
+	if err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	if cfg.Entry != "worker" {
+		t.Errorf("Expected Entry to be 'worker' (auto-detected), got %s", cfg.Entry)
+	}
+	if !strings.Contains(out.String(), "worker/main.go detected") {
+		t.Error("Expected output to mention auto-detection")
+	}
+}
+
 func TestInit_ErrorWhenBothEmpty(t *testing.T) {
 	input := "my-project\nmy-account\n\n\n\n\n"
 	in := strings.NewReader(input)

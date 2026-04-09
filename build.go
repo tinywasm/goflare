@@ -60,18 +60,28 @@ func (g *Goflare) buildWorker() error {
 }
 
 func (g *Goflare) buildPages() error {
-	// 1. Verify PublicDir exists
+	// 1. Verify that PUBLIC_DIR exists
 	if _, err := os.Stat(g.Config.PublicDir); os.IsNotExist(err) {
 		return fmt.Errorf("public dir does not exist: %s", g.Config.PublicDir)
 	}
 
-	// 2. Ensure OutputDir/dist exists
+	// 2. Compile frontend WASM if web/client.go exists
+	frontEntry := filepath.Join("web", "client.go")
+	if _, err := os.Stat(frontEntry); err == nil {
+		if g.twFront == nil {
+			return fmt.Errorf("frontend compiler not initialized (twFront is nil)")
+		}
+		g.Logger("compiling frontend WASM: web/client.go →", g.Config.PublicDir)
+		if err := g.twFront.Compile(); err != nil {
+			return fmt.Errorf("frontend WASM compilation failed: %w", err)
+		}
+	}
+
+	// 3. Copy PUBLIC_DIR -> .goflare/dist/
 	distDir := filepath.Join(g.Config.OutputDir, "dist")
 	if err := os.MkdirAll(distDir, 0755); err != nil {
 		return fmt.Errorf("failed to create dist directory: %w", err)
 	}
-
-	// 3. Copy files recursively
 	return copyDir(g.Config.PublicDir, distDir)
 }
 
