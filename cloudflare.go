@@ -117,10 +117,10 @@ func (g *Goflare) DeployPages(store Store) error {
 		return fmt.Errorf("failed to parse upload token: %w", err)
 	}
 
-	// 4. Walk dist/ and collect files
-	distDir := filepath.Join(g.Config.OutputDir, "dist")
+	// 4. Walk PublicDir and collect files
+	distDir := g.Config.PublicDir
 	if _, err := os.Stat(distDir); os.IsNotExist(err) {
-		return fmt.Errorf("dist directory missing: %s", distDir)
+		return fmt.Errorf("public directory missing: %s", distDir)
 	}
 
 	var files []uploadFile

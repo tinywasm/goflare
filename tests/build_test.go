@@ -9,39 +9,29 @@ import (
 )
 
 func TestBuild_PagesOnly(t *testing.T) {
-	tmpDir, cleanup, err := TempDir()
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer cleanup()
+	env := newTestEnv(t)
+	defer env.Close()
 
-	publicDir := filepath.Join(tmpDir, "public")
-	os.MkdirAll(publicDir, 0755)
-	os.WriteFile(filepath.Join(publicDir, "index.html"), []byte("<h1>Hello</h1>"), 0644)
-	os.MkdirAll(filepath.Join(publicDir, "assets"), 0755)
-	os.WriteFile(filepath.Join(publicDir, "assets", "style.css"), []byte("body {}"), 0644)
-
-	outputDir := filepath.Join(tmpDir, ".build")
+	env.writePublic("assets/style.css", "body {}")
 
 	cfg := &goflare.Config{
 		ProjectName: "test",
 		AccountID:   "123",
-		PublicDir:   publicDir,
-		OutputDir:   outputDir,
+		PublicDir:   env.PublicDir,
+		OutputDir:   env.OutputDir,
 	}
 
 	g := goflare.New(cfg)
-	err = g.Build()
+	err := g.Build()
 	if err != nil {
 		t.Fatalf("Build failed: %v", err)
 	}
 
-	distDir := filepath.Join(outputDir, "dist")
-	if _, err := os.Stat(filepath.Join(distDir, "index.html")); err != nil {
-		t.Errorf("index.html missing in dist: %v", err)
+	if _, err := os.Stat(filepath.Join(env.PublicDir, "index.html")); err != nil {
+		t.Errorf("index.html missing in PublicDir: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(distDir, "assets", "style.css")); err != nil {
-		t.Errorf("style.css missing in dist: %v", err)
+	if _, err := os.Stat(filepath.Join(env.PublicDir, "assets", "style.css")); err != nil {
+		t.Errorf("style.css missing in PublicDir: %v", err)
 	}
 }
 
