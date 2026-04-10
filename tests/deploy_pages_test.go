@@ -2,8 +2,6 @@ package goflare_test
 
 import (
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -11,16 +9,8 @@ import (
 )
 
 func TestDeployPages_FullFlow(t *testing.T) {
-	tmpDir, cleanup, err := TempDir()
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer cleanup()
-
-	outputDir := filepath.Join(tmpDir, ".build")
-	distDir := filepath.Join(outputDir, "dist")
-	os.MkdirAll(distDir, 0755)
-	os.WriteFile(filepath.Join(distDir, "index.html"), []byte("<h1>Hello</h1>"), 0644)
+	env := newTestEnv(t)
+	defer env.Close()
 
 	server := MockHTTPServer(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -60,28 +50,21 @@ func TestDeployPages_FullFlow(t *testing.T) {
 	cfg := &goflare.Config{
 		ProjectName: "test-project",
 		AccountID:   "account-id",
-		OutputDir:   outputDir,
+		PublicDir:   env.PublicDir,
+		OutputDir:   env.OutputDir,
 	}
 	g := goflare.New(cfg)
 	g.BaseURL = server.URL
 
-	err = g.DeployPages(store)
+	err := g.DeployPages(store)
 	if err != nil {
 		t.Fatalf("DeployPages failed: %v", err)
 	}
 }
 
 func TestDeployPages_CreatesProjectIfMissing(t *testing.T) {
-	tmpDir, cleanup, err := TempDir()
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer cleanup()
-
-	outputDir := filepath.Join(tmpDir, ".goflare")
-	distDir := filepath.Join(outputDir, "dist")
-	os.MkdirAll(distDir, 0755)
-	os.WriteFile(filepath.Join(distDir, "index.html"), []byte("hello"), 0644)
+	env := newTestEnv(t)
+	defer env.Close()
 
 	projectCreated := false
 	server := MockHTTPServer(func(w http.ResponseWriter, r *http.Request) {
@@ -98,18 +81,40 @@ func TestDeployPages_CreatesProjectIfMissing(t *testing.T) {
 			return
 		}
 		// Minimal response for the rest of the flow
+		if r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/uploadToken") {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"success":true,"result":{"jwt":"fake"}}`))
+			return
+		}
+		if r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/pages/assets/upload") {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"success":true,"result":{}}`))
+			return
+		}
+		if r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/deployments") {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"success":true,"result":{"url":"fake"}}`))
+			return
+		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"success":true,"result":{"jwt":"fake","url":"fake"}}`))
+		w.Write([]byte(`{"success":true,"result":null}`))
 	})
 	defer server.Close()
 
 	store := goflare.NewMemoryStore()
 	store.Set("goflare/test-project", "token")
-	cfg := &goflare.Config{ProjectName: "test-project", AccountID: "acc", OutputDir: outputDir}
+	cfg := &goflare.Config{
+		ProjectName: "test-project",
+		AccountID:   "acc",
+		PublicDir:   env.PublicDir,
+		OutputDir:   env.OutputDir,
+	}
 	g := goflare.New(cfg)
 	g.BaseURL = server.URL
 
-	g.DeployPages(store)
+	if err := g.DeployPages(store); err != nil {
+		t.Errorf("DeployPages failed: %v", err)
+	}
 	if !projectCreated {
 		t.Error("Project should have been created after 404")
 	}

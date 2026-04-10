@@ -29,8 +29,8 @@ var embeddedWorker []byte
 //  4. worker.mjs    — fetch/scheduled/queue/onRequest + export default (imports stripped)
 func (g *Goflare) generateWorkerFile() error {
 	wasmExecBody := stripIIFEWrapper(string(embeddedWasmExec))
-	runtimeBody := stripImports(string(embeddedRuntime))
-	workerBody := stripImports(string(embeddedWorker))
+	runtimeBody := stripExports(stripImports(string(embeddedRuntime)))
+	workerBody := stripImports(string(embeddedWorker)) // Keep export default here
 
 	bundle := strings.Join([]string{
 		`import mod from "./edge.wasm";`,
@@ -55,9 +55,24 @@ func (g *Goflare) generateWorkerFile() error {
 func stripImports(src string) string {
 	var lines []string
 	for _, line := range strings.Split(src, "\n") {
-		if !strings.HasPrefix(strings.TrimSpace(line), "import ") {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "import ") && !strings.HasPrefix(trimmed, "import{") {
 			lines = append(lines, line)
 		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// stripExports removes "export " from the beginning of lines,
+// but keeps "export default".
+func stripExports(src string) string {
+	var lines []string
+	for _, line := range strings.Split(src, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "export ") && !strings.HasPrefix(trimmed, "export default") {
+			line = strings.Replace(line, "export ", "", 1)
+		}
+		lines = append(lines, line)
 	}
 	return strings.Join(lines, "\n")
 }
@@ -65,12 +80,14 @@ func stripImports(src string) string {
 // stripIIFEWrapper removes the outer (() => { ... })(); from wasm_exec.js,
 // leaving the inner body for inline embedding.
 func stripIIFEWrapper(src string) string {
-	// wasm_exec.js wraps everything in (() => { ... });
-	// Find first { and last }); and extract the inner body.
-	start := strings.Index(src, "{")
-	end := strings.LastIndex(src, "});")
-	if start == -1 || end == -1 || end <= start {
-		return src // fallback: return as-is
+	start := strings.Index(src, "(() => {")
+	if start == -1 {
+		return src
 	}
-	return src[start+1 : end]
+	end := strings.LastIndex(src, "})();")
+	if end == -1 || end <= start {
+		return src
+	}
+	// Extract content between (() => { and })();
+	return src[start+8 : end]
 }

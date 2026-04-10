@@ -3,7 +3,6 @@ package goflare
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 )
@@ -83,57 +82,5 @@ func (g *Goflare) buildPages() error {
 		g.assetMin.SetBuildOnDisk(true)
 	}
 
-	// 4. Copy PUBLIC_DIR -> .build/dist/
-	distDir := filepath.Join(g.Config.OutputDir, "dist")
-	if err := os.MkdirAll(distDir, 0755); err != nil {
-		return fmt.Errorf("failed to create dist directory: %w", err)
-	}
-	return copyDir(g.Config.PublicDir, distDir)
-}
-
-func copyDir(src, dst string) error {
-	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		rel, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-
-		target := filepath.Join(dst, rel)
-
-		if info.IsDir() {
-			return os.MkdirAll(target, info.Mode())
-		}
-
-		return copyFile(path, target)
-	})
-}
-
-func copyFile(src, dst string) error {
-	sourceFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer sourceFile.Close()
-
-	destFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer destFile.Close()
-
-	_, err = io.Copy(destFile, sourceFile)
-	if err != nil {
-		return err
-	}
-
-	sourceInfo, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	return os.Chmod(dst, sourceInfo.Mode())
+	return nil
 }

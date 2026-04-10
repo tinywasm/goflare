@@ -58,6 +58,11 @@ func New(cfg *Config) *Goflare {
 	edgeCompiler.SetBuildOnDisk(true, false)
 	edgeCompiler.Change(cfg.CompilerMode)
 
+	// Edge functions use main.go (not client.go, which is the frontend default).
+	// OutputName "edge" makes TinyGo produce edge.wasm directly — no rename needed.
+	edgeCompiler.SetMainInputFile("main.go")
+	edgeCompiler.SetOutputName("edge")
+
 	g := &Goflare{
 		edgeCompiler: edgeCompiler,
 		Config:       cfg,
