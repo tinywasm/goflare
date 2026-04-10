@@ -1,4 +1,5 @@
 # GoFlare
+<img src="docs/img/badges.svg">
 
 **GoFlare** is a self-contained Go tool (library + CLI) for deploying Go WASM projects to Cloudflare Workers and Pages. No Node.js, no Wrangler, no GitHub Actions. Pure Go, direct Cloudflare API.
 
