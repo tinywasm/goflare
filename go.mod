@@ -24,7 +24,7 @@ require (
 	github.com/tinywasm/gorun v0.0.23 // indirect
 	github.com/tinywasm/json v0.5.0 // indirect
 	github.com/tinywasm/mcp v0.1.1 // indirect
-	github.com/tinywasm/orm v0.7.0 // indirect
+	github.com/tinywasm/orm v0.7.1 // indirect
 	github.com/tinywasm/time v0.4.0 // indirect
 	github.com/tinywasm/unixid v0.2.23 // indirect
 	github.com/tinywasm/wizard v0.0.23 // indirect
