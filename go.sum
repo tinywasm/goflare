@@ -42,8 +42,8 @@ github.com/tinywasm/gorun v0.0.23 h1:+2khVQCd1whCLYTP+AMC3lJVaKB6VOUYYXfj1Oj/tOY
 github.com/tinywasm/gorun v0.0.23/go.mod h1:9pApF2ZoaH/km6kGBVxL5WlStOoLwEZiV1uG4R4qeKo=
 github.com/tinywasm/json v0.5.1 h1:sRquBflq4L3lJt2+0Aq4ekkzlRpmCR2iM/GumdTLSQg=
 github.com/tinywasm/json v0.5.1/go.mod h1:BJBcCRq79I1oLfYFDs0Acw9dKLXzCbsc3XZp++z7yTs=
-github.com/tinywasm/mcp v0.1.4 h1:362LUGdY/edFLnh6ff9xhLE9vcrVJd2KAf9Ae8BADko=
-github.com/tinywasm/mcp v0.1.4/go.mod h1:DSX8dZgFiY4XpqVJKgWdqmserfkccggt5iJvvE7KGBA=
+github.com/tinywasm/mcp v0.1.5 h1:sNvYU30k241IDDn1N9Kgwz5n6pStTASGz7zQDmcGKgg=
+github.com/tinywasm/mcp v0.1.5/go.mod h1:6U7nqSc09I9xgawTHPjNT/2jx5B9snRimVn+bWU4icg=
 github.com/tinywasm/time v0.5.0 h1:M17DNgKrMYfkCK42V6miL9AcwfN/FHghbKOSTXJrkMo=
 github.com/tinywasm/time v0.5.0/go.mod h1:vxGAkKA40im4ObiTS6hcsJYiIsVVLSz/A63JC/+TwvA=
 github.com/tinywasm/unixid v0.2.23 h1:Lp/TER0RwbaT7EcHbQNzXj9LOGA2VD8rC8XLYmxJBc0=
