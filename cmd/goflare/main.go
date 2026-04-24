@@ -26,6 +26,12 @@ func main() {
 	switch os.Args[1] {
 	case "init":
 		err = goflare.RunInit(*env, os.Stdin, os.Stdout)
+	case "auth":
+		authFs := flag.NewFlagSet("auth", flag.ExitOnError)
+		reset := authFs.Bool("reset", false, "delete saved token")
+		check := authFs.Bool("check", false, "verify saved token")
+		authFs.Parse(os.Args[2:])
+		err = goflare.RunAuth(*env, os.Stdin, os.Stdout, *reset, *check)
 	case "build":
 		err = goflare.RunBuild(*env, os.Stdout)
 	case "deploy":
