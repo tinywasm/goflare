@@ -10,7 +10,6 @@ import (
 type Store interface {
 	Get(key string) (string, error)
 	Set(key, value string) error
-	Delete(key string) error
 }
 
 // KeyringStore is the real implementation using go-keyring.
@@ -25,11 +24,10 @@ func (s *KeyringStore) Get(key string) (string, error) {
 }
 
 func (s *KeyringStore) Set(key, value string) error {
+	if value == "" {
+		return keyring.Delete("goflare", key)
+	}
 	return keyring.Set("goflare", key, value)
-}
-
-func (s *KeyringStore) Delete(key string) error {
-	return keyring.Delete("goflare", key)
 }
 
 // MemoryStore is an in-memory Store exported for use by library consumers in tests.
@@ -58,13 +56,10 @@ func (s *MemoryStore) Get(key string) (string, error) {
 func (s *MemoryStore) Set(key, value string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if value == "" {
+		delete(s.data, key)
+		return nil
+	}
 	s.data[key] = value
-	return nil
-}
-
-func (s *MemoryStore) Delete(key string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.data, key)
 	return nil
 }

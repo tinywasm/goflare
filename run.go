@@ -17,7 +17,7 @@ func RunAuth(envPath string, in io.Reader, out io.Writer, reset bool, check bool
 	key := "goflare/" + cfg.ProjectName
 
 	if reset {
-		store.Delete(key)
+		store.Set(key, "")
 		fmt.Fprintln(out, "Token reset. Run goflare auth to set a new one.")
 		return nil
 	}
