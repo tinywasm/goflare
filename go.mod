@@ -15,7 +15,7 @@ require (
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/tdewolff/parse/v2 v2.8.11 // indirect
 	github.com/tinywasm/context v0.0.18 // indirect
-	github.com/tinywasm/devflow v0.4.18 // indirect
+	github.com/tinywasm/devflow v0.4.19 // indirect
 	github.com/tinywasm/dom v0.7.3 // indirect
 	github.com/tinywasm/fetch v0.1.23 // indirect
 	github.com/tinywasm/fmt v0.23.5 // indirect
