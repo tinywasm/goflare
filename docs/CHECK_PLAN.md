@@ -87,9 +87,9 @@ en vez del placeholder `<your-subdomain>`.
 - [x] `store.go` — `Delete(key)` en interfaz + `KeyringStore` + `MemoryStore`
 - [x] `store.go` — campo `ProjectName` unused eliminado de `KeyringStore`
 - [x] `init.go` — contexto visual para Account ID
-- [x] `docs/diagrams/AUTH_FLOW.md` — env var CI/CD + `goflare auth --reset/--check`
+- [x] `docs/diagrams/AUTH_FLOW.md` — env var CI/CD + `goflare auth -reset/-check`
 - [x] `docs/diagrams/DEPLOY_FLOW.md` — `dist/` → `PublicDir`; URL real con subdomain
 - [x] `docs/diagrams/goflare-generic.md` — `ASK_ENTRY` auto-detect; `COPY_DIST`/`D_HAS_DIST` eliminados; rama `CMD_AUTH` añadida
-- [ ] `run.go` — `RunAuth()` (Problema 3)
-- [ ] `cmd/goflare/main.go` — `case "auth"` + `Usage()` (Problema 3)
-- [ ] `cloudflare.go` — `getWorkerSubdomain()` + URL real en summary (Problema 6)
+- [x] `run.go` — `RunAuth()` (Problema 3)
+- [x] `cmd/goflare/main.go` — `case "auth"` + `Usage()` (Problema 3)
+- [x] `cloudflare.go` — `getWorkerSubdomain()` + URL real en summary (Problema 6)
