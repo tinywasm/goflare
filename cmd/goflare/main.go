@@ -14,22 +14,33 @@ func main() {
 		os.Exit(1)
 	}
 
-	fs := flag.NewFlagSet(os.Args[1], flag.ExitOnError)
-	env := fs.String("env", ".env", "path to .env file")
+	var env string
+	var reset, check bool
 
-	if err := fs.Parse(os.Args[2:]); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	fs := flag.NewFlagSet("goflare", flag.ExitOnError)
+	fs.StringVar(&env, "env", ".env", "path to .env file")
+
+	cmd := ""
+	if len(os.Args) >= 2 {
+		cmd = os.Args[1]
 	}
 
 	var err error
-	switch os.Args[1] {
+	switch cmd {
 	case "init":
-		err = goflare.RunInit(*env, os.Stdin, os.Stdout)
+		fs.Parse(os.Args[2:])
+		err = goflare.RunInit(env, os.Stdin, os.Stdout)
+	case "auth":
+		fs.BoolVar(&reset, "reset", false, "delete saved token")
+		fs.BoolVar(&check, "check", false, "verify saved token")
+		fs.Parse(os.Args[2:])
+		err = goflare.RunAuth(env, os.Stdin, os.Stdout, reset, check)
 	case "build":
-		err = goflare.RunBuild(*env, os.Stdout)
+		fs.Parse(os.Args[2:])
+		err = goflare.RunBuild(env, os.Stdout)
 	case "deploy":
-		err = goflare.RunDeploy(*env, os.Stdin, os.Stdout)
+		fs.Parse(os.Args[2:])
+		err = goflare.RunDeploy(env, os.Stdin, os.Stdout)
 	default:
 		fmt.Fprint(os.Stderr, goflare.Usage())
 		os.Exit(1)

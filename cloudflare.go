@@ -254,6 +254,23 @@ func (g *Goflare) configurePagesDomain(client *cfClient) error {
 }
 
 // DeployWorker uploads the Worker build output to Cloudflare Workers.
+func (g *Goflare) getWorkerSubdomain(client *cfClient) string {
+	path := fmt.Sprintf("/accounts/%s/workers/subdomain", g.Config.AccountID)
+	data, err := client.get(path)
+	if err != nil {
+		return "<your-subdomain>"
+	}
+	var result struct {
+		Result struct {
+			Subdomain string `json:"subdomain"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return "<your-subdomain>"
+	}
+	return result.Result.Subdomain
+}
+
 func (g *Goflare) DeployWorker(store Store) error {
 	token, err := g.GetToken(store)
 	if err != nil {

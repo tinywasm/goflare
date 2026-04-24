@@ -3,7 +3,41 @@ package goflare
 import (
 	"fmt"
 	"io"
+	"net/http"
 )
+
+// RunAuth runs the auth command.
+func RunAuth(envPath string, in io.Reader, out io.Writer, reset bool, check bool) error {
+	cfg, err := LoadConfigFromEnv(envPath)
+	if err != nil {
+		return err
+	}
+	g := New(cfg)
+	store := NewKeyringStore()
+	key := "goflare/" + cfg.ProjectName
+
+	if reset {
+		store.Delete(key)
+		fmt.Fprintln(out, "Token reset. Run goflare auth to set a new one.")
+		return nil
+	}
+
+	if check {
+		token, err := store.Get(key)
+		if err != nil || token == "" {
+			fmt.Fprintln(out, "No token saved.")
+			return fmt.Errorf("not authenticated")
+		}
+		if err := g.validateToken(token); err != nil {
+			fmt.Fprintln(out, "Token invalid:", err)
+			return err
+		}
+		fmt.Fprintln(out, "Token OK.")
+		return nil
+	}
+
+	return g.Auth(store, in)
+}
 
 // RunInit runs the init command.
 func RunInit(envPath string, in io.Reader, out io.Writer) error {
@@ -73,9 +107,22 @@ func RunDeploy(envPath string, in io.Reader, out io.Writer) error {
 
 	if cfg.Entry != "" {
 		err := g.DeployWorker(store)
+
+		subdomain := "<your-subdomain>"
+		if err == nil {
+			if token, tokenErr := g.GetToken(store); tokenErr == nil {
+				client := &cfClient{
+					token:      token,
+					baseURL:    g.BaseURL,
+					httpClient: http.DefaultClient,
+				}
+				subdomain = g.getWorkerSubdomain(client)
+			}
+		}
+
 		results = append(results, DeployResult{
 			Target: "Worker",
-			URL:    fmt.Sprintf("https://%s.<your-subdomain>.workers.dev", cfg.WorkerName), // We don't easily know the subdomain without another API call
+			URL:    fmt.Sprintf("https://%s.%s.workers.dev", cfg.WorkerName, subdomain),
 			Err:    err,
 		})
 	}
@@ -110,12 +157,17 @@ func Usage() string {
 
 Commands:
   init      Initialize a new project (creates .env)
+  auth      Authenticate with Cloudflare (saves token to keyring)
   build     Build the project (compiles WASM and/or copies assets)
   deploy    Deploy the project to Cloudflare
 
 Flags:
   -env string
 	path to .env file (default ".env")
+
+Auth Flags:
+  -reset    Delete saved token
+  -check    Verify saved token
 `
 }
 

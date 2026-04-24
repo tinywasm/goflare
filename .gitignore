@@ -1,3 +1,4 @@
 cmd/goflare/goflare
 .env
 goflare
+goflare-bin

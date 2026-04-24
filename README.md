@@ -52,6 +52,7 @@ go install github.com/tinywasm/goflare/cmd/goflare@latest
 ```
 
 - `goflare init`: Setup project and .env
+- `goflare auth`: Authenticate with Cloudflare (saves token to keyring)
 - `goflare build`: Compile WASM and generate assets
 - `goflare deploy`: Deploy to Cloudflare
 

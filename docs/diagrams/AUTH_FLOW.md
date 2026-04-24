@@ -33,7 +33,7 @@ sequenceDiagram
             U-->>G: Token
             G->>CF: GET /user/tokens/verify
             alt Invalid
-                CF-->>G: Error + actionable steps (goflare auth --reset)
+                CF-->>G: Error + actionable steps (goflare auth -reset)
             else Valid
                 CF-->>G: OK
                 G->>K: Save token (goflare/PROJECT_NAME)
@@ -47,6 +47,6 @@ sequenceDiagram
 
 ```
 goflare auth           # guarda/verifica token (interactivo si no hay token)
-goflare auth --reset   # borra token del keyring, pide uno nuevo en el próximo deploy
-goflare auth --check   # verifica token guardado sin pedir nada, exit 0/1
+goflare auth -reset   # borra token del keyring, pide uno nuevo en el próximo deploy
+goflare auth -check   # verifica token guardado sin pedir nada, exit 0/1
 ```
