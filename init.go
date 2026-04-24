@@ -32,7 +32,10 @@ func Init(in io.Reader, out io.Writer) (*Config, error) {
 		return nil, err
 	}
 
-	cfg.AccountID, err = ask("Cloudflare Account ID (see dash.cloudflare.com -> right sidebar):", true)
+	fmt.Fprintln(out, "")
+	fmt.Fprintln(out, "  Account ID: dash.cloudflare.com → right sidebar → copy Account ID")
+	fmt.Fprintln(out, "")
+	cfg.AccountID, err = ask("Cloudflare Account ID:", true)
 	if err != nil {
 		return nil, err
 	}
