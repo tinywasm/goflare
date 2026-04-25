@@ -20,8 +20,8 @@ github.com/tdewolff/parse/v2 v2.8.11 h1:SGyjEy3xEqd+W9WVzTlTQ5GkP/en4a1AZNZVJ1cv
 github.com/tdewolff/parse/v2 v2.8.11/go.mod h1:Hwlni2tiVNKyzR1o6nUs4FOF07URA+JLBLd6dlIXYqo=
 github.com/tdewolff/test v1.0.11 h1:FdLbwQVHxqG16SlkGveC0JVyrJN62COWTRyUFzfbtBE=
 github.com/tdewolff/test v1.0.11/go.mod h1:XPuWBzvdUzhCuxWO1ojpXsyzsA5bFoS3tO/Q3kFuTG8=
-github.com/tinywasm/assetmin v0.2.2 h1:yxCR/CNIoheH27fdsjYHopTae7T4CU9X6b2wY604L+8=
-github.com/tinywasm/assetmin v0.2.2/go.mod h1:SWZNMq/LNLY3u2+s8dhAyiGjZ8+OxtgzRmSMpajnHOw=
+github.com/tinywasm/assetmin v0.2.3 h1:RfjixGrP1xmzOUTFYjyNIWukkkaXJ73ieNgzBVKrTv8=
+github.com/tinywasm/assetmin v0.2.3/go.mod h1:SWZNMq/LNLY3u2+s8dhAyiGjZ8+OxtgzRmSMpajnHOw=
 github.com/tinywasm/client v0.6.0 h1:6Qjq9yB4VHm45sGkarGqc43OzGP0v73l1Fn+ALfiqU4=
 github.com/tinywasm/client v0.6.0/go.mod h1:2j4Fd/SlPgArkesh+PsjviOT0pLVOGUgWD2i8dkXdO8=
 github.com/tinywasm/context v0.0.18 h1:uKeiAFo6L/PikGSbUu+xcyELGoa4kXomDNwJOlhxrUE=
