@@ -5,7 +5,7 @@ go 1.25.2
 require (
 	github.com/tdewolff/minify/v2 v2.24.12
 	github.com/tinywasm/assetmin v0.2.4
-	github.com/tinywasm/client v0.6.3
+	github.com/tinywasm/client v0.6.4
 	github.com/zalando/go-keyring v0.2.6
 )
 
