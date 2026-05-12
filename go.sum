@@ -26,10 +26,12 @@ github.com/tinywasm/client v0.6.5 h1:nAY9TEqyEUa+k7zm4ykaPgJVFYNCQGN1fw2HTQ4WCDY
 github.com/tinywasm/client v0.6.5/go.mod h1:px/YIGQggQA36pjtP7XD3xP+ttm2WHEgLgvOM1vJ5VM=
 github.com/tinywasm/context v0.0.18 h1:uKeiAFo6L/PikGSbUu+xcyELGoa4kXomDNwJOlhxrUE=
 github.com/tinywasm/context v0.0.18/go.mod h1:3AHZHMiiVZljEGNuYMaLM2OXdZ3bXjoMCmqx3sEGXsA=
+github.com/tinywasm/css v0.0.3 h1:YD2Bzww3pNsanUHscG2C1fU/JgMNITIeiDFwcqakaso=
+github.com/tinywasm/css v0.0.3/go.mod h1:CDphLEExw72fAXQjVFOmjA2+cRnTty3ejdAbP9D+i9U=
 github.com/tinywasm/devflow v0.4.21 h1:g7MSA6bfgZM7e8MkUmzWQ7131BDf51dJL7G94jvXkCQ=
 github.com/tinywasm/devflow v0.4.21/go.mod h1:wf78Kk9cM/iBbwBkrYa6UBZqw56xzH5Wzs2U6gL0lm4=
-github.com/tinywasm/dom v0.9.1 h1:I3qOG/FsHFROE/XsgNy8uFnVtCi8JnATgHQ03slN9Ew=
-github.com/tinywasm/dom v0.9.1/go.mod h1:V9jYS5vPC5Vx/SD2g3HHh+/KQMgMeMSY/25gu3mGmew=
+github.com/tinywasm/dom v0.9.2 h1:sozVJtllno/h4hcYGey/CiMGFeD9CVaxq/K6YUVemnc=
+github.com/tinywasm/dom v0.9.2/go.mod h1:xeYOGpi83k3FcbegDADwazwjJcqJkK9VXMd223HxleA=
 github.com/tinywasm/fetch v0.1.23 h1:R8Nr1LwcFUVgQsk5f0CilNNP8r0wc3DPaZuC5O8hYTM=
 github.com/tinywasm/fetch v0.1.23/go.mod h1:XR4SHs1qYUFcPcFVw/r+TrwG+9+jENQPslWAKVC6nHQ=
 github.com/tinywasm/fmt v0.23.7 h1:DOJ2BzdPHtavj6gYxpnOfdPkRVppX7FbU1cElV3JXbg=
