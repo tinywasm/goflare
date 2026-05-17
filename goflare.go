@@ -55,7 +55,7 @@ func New(cfg *Config) *Goflare {
 		OutputDir: func() string { return cfg.OutputDir },
 	})
 
-	edgeCompiler.SetBuildOnDisk(true, false)
+	edgeCompiler.UseDiskStorage()
 	edgeCompiler.SetMode(cfg.CompilerMode)
 
 	// Edge functions use main.go (not client.go, which is the frontend default).
@@ -79,7 +79,7 @@ func New(cfg *Config) *Goflare {
 			SourceDir: func() string { return frontSourceDir },
 			OutputDir: func() string { return cfg.PublicDir },
 		})
-		browserCompiler.SetBuildOnDisk(true, false)
+		browserCompiler.UseDiskStorage()
 		browserCompiler.SetMode(cfg.CompilerMode)
 		g.browserCompiler = browserCompiler
 

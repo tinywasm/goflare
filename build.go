@@ -79,7 +79,9 @@ func (g *Goflare) buildPages() error {
 	// 3. Generate script.js + style.css via assetmin
 	if g.assetMin != nil {
 		g.Logger("generating assets: script.js, style.css →", g.Config.PublicDir)
-		g.assetMin.SetBuildOnDisk(true)
+		if err := g.assetMin.FlushToDisk(); err != nil {
+			return fmt.Errorf("assetmin flush failed: %w", err)
+		}
 	}
 
 	return nil
