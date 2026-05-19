@@ -71,8 +71,12 @@ func (g *Goflare) Build() error {
 // buildPagesFunctions compiles edge/main.go to functions/edge.wasm and writes the
 // glue bundle functions/[[path]].mjs (catch-all, exports onRequest only).
 //
-// Both outputs go directly to the project tree (no .build/ staging) so the dev
-// commits them and CF Git Integration deploys them as-is (D8).
+// Both outputs end up in the project tree (no .build/ staging visible to the dev)
+// so the dev commits them and CF Git Integration deploys them as-is (D8).
+//
+// Implementation note: tinywasm/client caches the storage path at UseDiskStorage()
+// time, so we let it compile to its configured OutputDir (.build/) and then move
+// edge.wasm into functions/. Cheaper than restructuring the storage init.
 func (g *Goflare) buildPagesFunctions() error {
 	if _, err := os.Stat(g.Config.Entry); os.IsNotExist(err) {
 		return fmt.Errorf("entry path does not exist: %s", g.Config.Entry)
@@ -83,13 +87,14 @@ func (g *Goflare) buildPagesFunctions() error {
 		return fmt.Errorf("failed to create functions dir: %w", err)
 	}
 
-	// Redirect TinyGo output to functions/ for this build only.
-	origOutput := g.Config.OutputDir
-	g.Config.OutputDir = functionsDir
-	defer func() { g.Config.OutputDir = origOutput }()
-
 	if err := g.generateWasmFile(); err != nil {
 		return err
+	}
+
+	srcWasm := filepath.Join(g.Config.OutputDir, "edge.wasm")
+	dstWasm := filepath.Join(functionsDir, "edge.wasm")
+	if err := moveFile(srcWasm, dstWasm); err != nil {
+		return fmt.Errorf("failed to move edge.wasm to %s: %w", functionsDir, err)
 	}
 
 	if err := g.generatePagesFunctionFile(); err != nil {
@@ -97,6 +102,21 @@ func (g *Goflare) buildPagesFunctions() error {
 	}
 
 	return nil
+}
+
+// moveFile renames src to dst, falling back to copy+delete across filesystems.
+func moveFile(src, dst string) error {
+	if err := os.Rename(src, dst); err == nil {
+		return nil
+	}
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(dst, data, 0644); err != nil {
+		return err
+	}
+	return os.Remove(src)
 }
 
 func (g *Goflare) buildWorker() error {
