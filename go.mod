@@ -6,7 +6,7 @@ require (
 	github.com/tdewolff/minify/v2 v2.24.12
 	github.com/tinywasm/assetmin v0.3.4
 	github.com/tinywasm/client v0.6.8
-	github.com/tinywasm/fmt v0.23.8
+	github.com/tinywasm/fmt v0.23.9
 	github.com/zalando/go-keyring v0.2.6
 )
 
