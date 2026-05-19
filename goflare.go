@@ -25,6 +25,9 @@ type Config struct {
 	// Build output (not in .env — always .build/)
 	OutputDir string // default: ".build/"
 
+	// Pages Functions output (sibling to web/public/, committed to git)
+	FunctionsDir string // default: "functions"
+
 	// Compiler
 	CompilerMode string // "S" | "M" | "L"  default: "S"
 }

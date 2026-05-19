@@ -74,11 +74,17 @@ func TestInit_AutoDetect(t *testing.T) {
 }
 
 func TestInit_ErrorWhenBothEmpty(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "goflare-test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
 	input := "my-project\nmy-account\n\n\n\n\n"
 	in := strings.NewReader(input)
 	out := &bytes.Buffer{}
 
-	_, err := goflare.Init(in, out)
+	_, err = goflare.InitWithDir(in, out, tmpDir)
 	if err == nil {
 		t.Fatal("Expected error when both Entry and PublicDir are empty, got nil")
 	}

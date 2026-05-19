@@ -3,8 +3,9 @@
 package workers
 
 import (
-    "fmt"
     "syscall/js"
+
+    "github.com/tinywasm/fmt"
 )
 
 // Request represents an incoming HTTP request to the Worker.
@@ -44,7 +45,7 @@ func newRequest(jsReq js.Value) (*Request, error) {
     // Read body — blocks via channel + promise chaining
     body, err := readBodyText(jsReq)
     if err != nil {
-        return nil, fmt.Errorf("workers: read body: %w", err)
+        return nil, fmt.Errf("workers: read body: %s", err.Error())
     }
     r.body = []byte(body)
 
@@ -78,6 +79,6 @@ func readBodyText(jsReq js.Value) (string, error) {
     case text := <-ch:
         return text, nil
     case msg := <-errCh:
-        return "", fmt.Errorf("%s", msg)
+        return "", fmt.Errf("%s", msg)
     }
 }
