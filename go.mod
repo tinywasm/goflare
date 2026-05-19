@@ -5,7 +5,8 @@ go 1.25.2
 require (
 	github.com/tdewolff/minify/v2 v2.24.12
 	github.com/tinywasm/assetmin v0.3.3
-	github.com/tinywasm/client v0.6.6
+	github.com/tinywasm/client v0.6.7
+	github.com/tinywasm/fmt v0.23.7
 	github.com/zalando/go-keyring v0.2.6
 )
 
@@ -19,7 +20,6 @@ require (
 	github.com/tinywasm/devflow v0.4.21 // indirect
 	github.com/tinywasm/dom v0.9.3 // indirect
 	github.com/tinywasm/fetch v0.1.23 // indirect
-	github.com/tinywasm/fmt v0.23.7 // indirect
 	github.com/tinywasm/form v0.2.2 // indirect
 	github.com/tinywasm/gobuild v0.0.25 // indirect
 	github.com/tinywasm/gorun v0.0.23 // indirect
