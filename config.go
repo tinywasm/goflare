@@ -108,6 +108,9 @@ func (c *Config) applyDefaults() {
 	if c.OutputDir == "" {
 		c.OutputDir = ".build/" // was: ".goflare/"
 	}
+	if c.FunctionsDir == "" {
+		c.FunctionsDir = "functions"
+	}
 	if c.CompilerMode == "" {
 		c.CompilerMode = "S"
 	}
