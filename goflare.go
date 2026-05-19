@@ -59,15 +59,13 @@ func New(cfg *Config) *Goflare {
 	})
 
 	edgeCompiler.UseDiskStorage()
-	// goflare ALWAYS compiles the edge with TinyGo "S" (Small / production).
-	// Reasons:
-	//   - Cloudflare Workers/Pages have a hard 1 MiB wasm limit on Free plans.
-	//   - "L" (standard Go) produces 2-10 MB binaries that exceed the limit by design.
-	//   - "M" is TinyGo debug — only useful when iterating locally; never for deploy.
-	// Change() (not SetMode()) is used so the mode is persisted to disk storage,
-	// otherwise a leftover "L" from a previous run would silently override the
-	// in-memory SetMode("S") and produce a Go-std binary.
-	edgeCompiler.Change("S")
+	// goflare ALWAYS compiles the edge with TinyGo in production mode.
+	// Cloudflare Workers/Pages enforce a 1 MiB wasm limit on Free plans,
+	// which standard Go (2-10 MB) cannot meet. The typed wrapper insulates
+	// goflare from any future change to the internal mode letter and
+	// persists the choice to disk storage so a stale previous mode does
+	// not silently override it.
+	edgeCompiler.UseProductionTinyGo()
 
 	// Edge functions use main.go (not client.go, which is the frontend default).
 	// OutputName "edge" makes TinyGo produce edge.wasm directly — no rename needed.
