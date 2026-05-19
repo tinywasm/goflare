@@ -75,8 +75,12 @@ func (g *Goflare) bundleJS(dest, wasmImport string, pagesOnly bool) error {
 }
 
 // pagesOnlyExport replaces the embedded `export default { fetch, scheduled, queue, onRequest }`
-// block with `export const onRequest = onRequest;` so the file is a valid Pages Functions module.
-// The `onRequest` function itself stays defined upstream in the bundle.
+// block with `export { onRequest };` (named re-export) so the file is a valid Pages Functions
+// module. The `onRequest` function itself stays defined upstream in the bundle.
+//
+// Note: `export const onRequest = onRequest;` would self-reference the identifier on the same
+// line and the minifier rejects it. Named re-export of the existing top-level function is the
+// idiomatic ES form.
 func pagesOnlyExport(src string) string {
 	const marker = "export default {"
 	idx := strings.Index(src, marker)
@@ -88,7 +92,7 @@ func pagesOnlyExport(src string) string {
 	if end == -1 {
 		return src
 	}
-	return src[:idx] + "export const onRequest = onRequest;" + src[idx+end+2:]
+	return src[:idx] + "export { onRequest };" + src[idx+end+2:]
 }
 
 // functionsDir returns the configured functions output dir, defaulting to "functions".
