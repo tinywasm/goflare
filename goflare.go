@@ -7,6 +7,7 @@ import (
 
 	"github.com/tinywasm/assetmin"
 	"github.com/tinywasm/client"
+	"github.com/tinywasm/js"
 )
 
 type Config struct {
@@ -39,6 +40,14 @@ type Goflare struct {
 	Config          *Config            // exported so CLI can read it after LoadConfigFromEnv
 	log             func(message ...any)
 	BaseURL string
+}
+
+func syncJSRuntime(mode string) {
+	if mode == "L" {
+		js.SetRuntime(js.RuntimeGo)
+	} else {
+		js.SetRuntime(js.RuntimeTinyGo)
+	}
 }
 
 // New creates a new Goflare instance with the provided configuration
@@ -92,12 +101,12 @@ func New(cfg *Config) *Goflare {
 		browserCompiler.SetMode(cfg.CompilerMode)
 		g.browserCompiler = browserCompiler
 
+		syncJSRuntime(cfg.CompilerMode)
+
 		g.assetMin = assetmin.NewAssetMin(&assetmin.Config{
 			OutputDir: cfg.PublicDir,
-			GetSSRClientInitJS: func() (string, error) {
-				return browserCompiler.GetSSRClientInitJS()
-			},
 		})
+		g.assetMin.UpdateSSRModule("tinywasm/js/bootstrap", "", []*js.Script{js.PageBootstrap()}, "", nil)
 	}
 
 	return g
