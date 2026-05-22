@@ -140,6 +140,18 @@ func handler(w *workers.Response, r *workers.Request) {
 }
 ```
 
+## D1 Database (Cloudflare D1)
+
+Connect to a Cloudflare D1 SQLite database from within a Worker or Pages Function edge handler using `github.com/tinywasm/goflare/d1`. See [docs/D1.md](docs/D1.md) for full documentation.
+
+```go
+db, err := d1.New("DB") // "DB" is the binding name in wrangler.toml
+if err != nil { ... }
+defer db.Close()
+db.CreateTable(&MyModel{})
+db.Create(&MyModel{...})
+```
+
 ## ⚠️ Critical: NO heavy stdlib in wasm code
 Files with `//go:build wasm` (everything under `edge/`, `routes/`, `modules/`, `workers/`, `pages/pages.go`, `cloudflare/env_wasm.go`) **NEVER** import `fmt`, `strings`, `errors`, `encoding/*`, `net/http`, `log`, `io/ioutil`. Use `tinywasm/fmt`, `tinywasm/json`, `tinywasm/strings`, `tinywasm/fetch` instead.
 
