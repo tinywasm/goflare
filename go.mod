@@ -9,7 +9,7 @@ require (
 	github.com/tinywasm/fmt v0.23.9
 	github.com/tinywasm/js v0.0.3
 	github.com/tinywasm/jsvalue v0.0.12
-	github.com/tinywasm/orm v0.8.1
+	github.com/tinywasm/orm v0.8.2
 	github.com/tinywasm/sqlt v0.0.2
 	github.com/zalando/go-keyring v0.2.6
 )
