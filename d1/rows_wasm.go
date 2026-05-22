@@ -4,6 +4,7 @@ package d1
 
 import (
 	"syscall/js"
+
 	. "github.com/tinywasm/fmt"
 	"github.com/tinywasm/jsvalue"
 )
@@ -45,7 +46,7 @@ func (r *d1Rows) Scan(dest ...any) error {
 	}
 	for i, ptr := range dest {
 		v := row.Index(i)
-		if err := scanValue(v, ptr); err != nil {
+		if err := jsvalue.ScanValue(v, ptr); err != nil {
 			return err
 		}
 	}
@@ -54,51 +55,6 @@ func (r *d1Rows) Scan(dest ...any) error {
 
 func (r *d1Rows) Close() error { return nil }
 func (r *d1Rows) Err() error   { return nil }
-
-// scanValue copies a JS value into a Go pointer.
-func scanValue(v js.Value, dest any) error {
-	switch p := dest.(type) {
-	case *string:
-		*p = v.String()
-	case *int:
-		*p = v.Int()
-	case *int64:
-		*p = int64(v.Float())
-	case *float64:
-		*p = v.Float()
-	case *bool:
-		*p = v.Bool()
-	case *[]byte:
-		src := jsvalue.Uint8ArrayClass.New(v)
-		b := make([]byte, src.Length())
-		js.CopyBytesToGo(b, src)
-		*p = b
-	case *any:
-		*p = jsValueToAny(v)
-	default:
-		return Errf(errPrefix+"unsupported scan type: %T", dest)
-	}
-	return nil
-}
-
-func jsValueToAny(v js.Value) any {
-	switch v.Type() {
-	case js.TypeNull, js.TypeUndefined:
-		return nil
-	case js.TypeBoolean:
-		return v.Bool()
-	case js.TypeNumber:
-		f := v.Float()
-		if f == float64(int64(f)) {
-			return int64(f)
-		}
-		return f
-	case js.TypeString:
-		return v.String()
-	default:
-		return v.String()
-	}
-}
 
 // errScanner is a Scanner that always returns an error.
 type errScanner struct{ err error }
@@ -117,7 +73,7 @@ func (s *rowScanner) Scan(dest ...any) error {
 	}
 	for i, ptr := range dest {
 		v := s.row.Index(i)
-		if err := scanValue(v, ptr); err != nil {
+		if err := jsvalue.ScanValue(v, ptr); err != nil {
 			return err
 		}
 	}
