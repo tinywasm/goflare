@@ -229,7 +229,7 @@ func (s *directRowScanner) Scan(dest ...any) error {
         if i >= len(dest) {
             break
         }
-        if err := scanAny(v, dest[i]); err != nil {
+        if err := orm.ScanAny(v, dest[i]); err != nil {
             return err
         }
         i++
@@ -258,7 +258,7 @@ func (r *directRows) Scan(dest ...any) error {
         if i >= len(dest) {
             break
         }
-        if err := scanAny(v, dest[i]); err != nil {
+        if err := orm.ScanAny(v, dest[i]); err != nil {
             return err
         }
         i++
@@ -268,43 +268,6 @@ func (r *directRows) Scan(dest ...any) error {
 
 func (r *directRows) Close() error { return nil }
 func (r *directRows) Err() error   { return nil }
-
-// scanAny maps a JSON-decoded any value into a typed pointer.
-func scanAny(v any, dest any) error {
-    switch p := dest.(type) {
-    case *string:
-        if s, ok := v.(string); ok {
-            *p = s
-        }
-    case *int:
-        switch n := v.(type) {
-        case float64:
-            *p = int(n)
-        case int64:
-            *p = int(n)
-        }
-    case *int64:
-        switch n := v.(type) {
-        case float64:
-            *p = int64(n)
-        case int64:
-            *p = n
-        }
-    case *float64:
-        if n, ok := v.(float64); ok {
-            *p = n
-        }
-    case *bool:
-        if b, ok := v.(bool); ok {
-            *p = b
-        }
-    case *any:
-        *p = v
-    default:
-        return fmt.Errorf(errPrefix+"unsupported scan type: %T", dest)
-    }
-    return nil
-}
 ```
 
 ### Stage 2 — `goflare/d1/d1_integration_test.go` (new file)
@@ -450,7 +413,7 @@ go mod tidy
 
 | # | Archivo | Acción |
 |---|---|---|
-| 1 | `goflare/d1/client.go` | Nuevo (`//go:build !wasm`): `directAdapter`, `NewDirect`, `d1RestClient`, `scanAny`, `directRows`, `directRowScanner` |
+| 1 | `goflare/d1/client.go` | Nuevo (`//go:build !wasm`): `directAdapter`, `NewDirect`, `d1RestClient`, `directRows`, `directRowScanner` — escaneo via `orm.ScanAny` |
 | 2 | `goflare/d1/d1_integration_test.go` | Nuevo (`//go:build integration && !wasm`): `TestD1Integration` usando `orm.DB` via `d1.NewDirect` |
 | 3 | `goflare/go.mod` | `go mod tidy` |
 
