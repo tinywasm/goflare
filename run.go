@@ -1,9 +1,12 @@
+//go:build !wasm
+
 package goflare
 
 import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 )
 
 // RunAuth runs the auth command.
@@ -151,6 +154,15 @@ func RunDeploy(envPath string, in io.Reader, out io.Writer) error {
 	return nil
 }
 
+func RunD1InitCmd(envPath, dbName string) error {
+	store := NewKeyringStore()
+	cfg, _ := LoadConfigFromEnv(envPath)
+	token, _ := store.Get("goflare/" + cfg.ProjectName)
+	// token can be empty — RunD1Init will return ErrNoToken before using d1
+	client := &cfClient{token: token, baseURL: cfAPIBase, httpClient: http.DefaultClient}
+	return RunD1Init(envPath, dbName, store, &cfD1Manager{client}, &execGHRunner{}, &fileEnvWriter{}, os.Stdout)
+}
+
 // Usage returns the usage string.
 func Usage() string {
 	return `Usage: goflare <command> [flags]
@@ -160,6 +172,7 @@ Commands:
   auth      Authenticate with Cloudflare (saves token to keyring)
   build     Build the project (compiles WASM and/or copies assets)
   deploy    Deploy the project to Cloudflare
+  d1 init   Setup D1 database and GitHub secrets
 
 Flags:
   -env string

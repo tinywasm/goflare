@@ -1,3 +1,5 @@
+//go:build !wasm
+
 package goflare
 
 import (
@@ -6,6 +8,18 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+)
+
+const (
+	EnvKeyProjectName    = "PROJECT_NAME"
+	EnvKeyAccountID      = "CLOUDFLARE_ACCOUNT_ID"
+	EnvKeyWorkerName     = "WORKER_NAME"
+	EnvKeyDomain         = "DOMAIN"
+	EnvKeyEntry          = "ENTRY"
+	EnvKeyPublicDir      = "PUBLIC_DIR"
+	EnvKeyCompilerMode   = "COMPILER_MODE"
+	EnvKeyD1DatabaseID   = "D1_DATABASE_ID"
+	EnvKeyD1DatabaseName = "D1_DATABASE_NAME"
 )
 
 // LoadConfigFromEnv reads a .env file and populates Config.
@@ -39,20 +53,24 @@ func LoadConfigFromEnv(path string) (*Config, error) {
 				}
 
 				switch key {
-				case "PROJECT_NAME":
+				case EnvKeyProjectName:
 					cfg.ProjectName = value
-				case "CLOUDFLARE_ACCOUNT_ID":
+				case EnvKeyAccountID:
 					cfg.AccountID = value
-				case "WORKER_NAME":
+				case EnvKeyWorkerName:
 					cfg.WorkerName = value
-				case "DOMAIN":
+				case EnvKeyDomain:
 					cfg.Domain = value
-				case "ENTRY":
+				case EnvKeyEntry:
 					cfg.Entry = value
-				case "PUBLIC_DIR":
+				case EnvKeyPublicDir:
 					cfg.PublicDir = value
-				case "COMPILER_MODE":
+				case EnvKeyCompilerMode:
 					cfg.CompilerMode = value
+				case EnvKeyD1DatabaseID:
+					cfg.D1DatabaseID = value
+				case EnvKeyD1DatabaseName:
+					cfg.D1DatabaseName = value
 				}
 			}
 			if err := scanner.Err(); err != nil {
@@ -63,25 +81,31 @@ func LoadConfigFromEnv(path string) (*Config, error) {
 
 	// Fallback to OS environment variables if still empty
 	if cfg.ProjectName == "" {
-		cfg.ProjectName = os.Getenv("PROJECT_NAME")
+		cfg.ProjectName = os.Getenv(EnvKeyProjectName)
 	}
 	if cfg.AccountID == "" {
-		cfg.AccountID = os.Getenv("CLOUDFLARE_ACCOUNT_ID")
+		cfg.AccountID = os.Getenv(EnvKeyAccountID)
 	}
 	if cfg.WorkerName == "" {
-		cfg.WorkerName = os.Getenv("WORKER_NAME")
+		cfg.WorkerName = os.Getenv(EnvKeyWorkerName)
 	}
 	if cfg.Domain == "" {
-		cfg.Domain = os.Getenv("DOMAIN")
+		cfg.Domain = os.Getenv(EnvKeyDomain)
 	}
 	if cfg.Entry == "" {
-		cfg.Entry = os.Getenv("ENTRY")
+		cfg.Entry = os.Getenv(EnvKeyEntry)
 	}
 	if cfg.PublicDir == "" {
-		cfg.PublicDir = os.Getenv("PUBLIC_DIR")
+		cfg.PublicDir = os.Getenv(EnvKeyPublicDir)
 	}
 	if cfg.CompilerMode == "" {
-		cfg.CompilerMode = os.Getenv("COMPILER_MODE")
+		cfg.CompilerMode = os.Getenv(EnvKeyCompilerMode)
+	}
+	if cfg.D1DatabaseID == "" {
+		cfg.D1DatabaseID = os.Getenv(EnvKeyD1DatabaseID)
+	}
+	if cfg.D1DatabaseName == "" {
+		cfg.D1DatabaseName = os.Getenv(EnvKeyD1DatabaseName)
 	}
 
 	cfg.applyDefaults()

@@ -1,3 +1,5 @@
+//go:build !wasm
+
 package goflare
 
 func (g *Goflare) generateWasmFile() error {
