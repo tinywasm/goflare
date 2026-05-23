@@ -1,408 +1,637 @@
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
 
-# Plan: goflare/d1 — Integration test via Cloudflare D1 REST API
+# Plan: goflare d1 init — Comando + tests del flujo completo
 
 ## Context
 
-`goflare/d1` implements `orm.Executor` over the Cloudflare D1 JS binding (WASM-only).
-There are no automated tests verifying that the SQL it generates actually works against a real
-D1 database. This plan adds:
+Implementar `goflare d1 init` que automatiza el setup de D1 + GitHub en un solo comando.
+El flujo completo está documentado en `docs/diagrams/CLOUDFLARE_GH_ENV_FLOW.md`.
 
-1. A pure-Go D1 REST client (`goflare/d1/client.go`) — no WASM, uses `net/http`.
-2. An integration test (`goflare/d1/d1_integration_test.go`) with `//go:build integration`
-   that hits the real Cloudflare D1 REST API.
-
-## Architecture
-
-The D1 REST endpoint is:
-```
-POST https://api.cloudflare.com/client/v4/accounts/{account_id}/d1/database/{database_id}/query
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{"sql": "SELECT 1", "params": []}
-```
-
-Response envelope (same `cfEnvelope` pattern already used in `cloudflare.go`):
-```json
-{
-  "success": true,
-  "result": [{"results": [{"col": "val"}], "success": true, "meta": {...}}]
-}
-```
-
-The client reuses the existing `cfClient` and `parseCFResponse` from `cloudflare.go`.
-These are unexported — the new `d1Client` wrapper lives in `goflare/d1/client.go` and
-calls the CF API directly using `net/http` (duplicates only the minimal HTTP logic, no
-dependency on the parent `goflare` package to avoid circular imports).
-
-## Token resolution (keyring-first, env-var fallback for CI)
-
-```go
-func resolveToken(t *testing.T) string {
-    // 1. Try OS keyring (local dev — set via `goflare auth`)
-    token, err := keyring.Get("goflare", "CLOUDFLARE_API_TOKEN")
-    if err == nil && token != "" {
-        return token
-    }
-    // 2. Env var fallback (CI — GitHub Secret injected as env)
-    token = os.Getenv("CLOUDFLARE_API_TOKEN")
-    if token != "" {
-        return token
-    }
-    t.Skip("no token: run 'goflare auth' locally or set CLOUDFLARE_API_TOKEN in CI")
-    return ""
-}
-```
-
-Same pattern for `CLOUDFLARE_ACCOUNT_ID` and `D1_DATABASE_ID`:
-- Local: read from the project's `.env` file (already present in any goflare project).
-- CI: set as env vars in GitHub Secrets.
-- Missing → `t.Skip(...)`.
+Los tests de este plan son **mocks del diagrama** — cada nodo de decisión del diagrama
+tiene un test correspondiente. El objetivo es capturar el comportamiento para detectar
+regresiones si el flujo cambia.
 
 ## Code quality rules
 
-- No string literals in logic — use named constants for all env key names and API paths.
-- `client.go` MUST have `//go:build !wasm` — stdlib `net/http` and `encoding/json` must never enter the WASM binary. This is the same split used throughout goflare (`cloudflare.go` is host-only, `adapter_wasm.go` is WASM-only).
-- `d1_integration_test.go` has `//go:build integration` — test files never compile to WASM, but explicit `!wasm` is added for clarity.
-- All HTTP errors surface as typed errors via `d1APIError`.
+- No string literals — todos los env keys, paths, mensajes de error: constantes exportadas.
+- Thin `cmd/` — toda la lógica en el paquete `goflare`, no en `main.go`.
+- Interfaces para todo lo inyectable (CF API, gh CLI, env file) — testables sin red.
+- `RunD1Init` es la función de librería; `main.go` solo parsea flags y llama.
+- **No stdlib `fmt` ni `errors`** — usar `. "github.com/tinywasm/fmt"` (dot-import).
+  - `Err("msg")` reemplaza `errors.New("msg")` y `fmt.Errorf("msg")`
+  - `Errf("format", args...)` reemplaza `fmt.Errorf("format", args...)`
+  - `Sprintf` / `Fprintf` / `Fprintln` de `tinywasm/fmt` reemplazan los de stdlib.
+- **Build tag `//go:build !wasm`** en todos los archivos nuevos y en los archivos existentes
+  modificados que contengan código host-only (keyring, `os/exec`, `net/http`, CF API).
+  Esto evita contaminar el binario WASM del worker/pages con dependencias innecesarias.
+  Patrón establecido en el codebase: ver `d1/client.go`.
+
+## Interfaces nuevas
+
+### `D1Manager` — abstrae las llamadas CF API para D1
+
+```go
+// D1Manager abstracts the Cloudflare D1 REST API for listing and creating databases.
+type D1Manager interface {
+    ListD1Databases(accountID string) ([]D1Database, error)
+    CreateD1Database(accountID, name string) (D1Database, error)
+}
+
+type D1Database struct {
+    UUID string `json:"uuid"`
+    Name string `json:"name"`
+}
+```
+
+Implementación real: `cfD1Manager` (usa `cfClient` ya existente).
+Implementación test: `mockD1Manager` (struct con campos funcionales).
+
+### `GHRunner` — abstrae `gh` CLI
+
+```go
+// GHRunner abstracts the gh CLI for setting GitHub secrets and variables.
+type GHRunner interface {
+    SetSecret(repo, name, value string) error
+    SetVariable(repo, name, value string) error
+    RemoteURL() (string, error) // git remote get-url origin
+    Available() bool            // gh CLI present in PATH
+}
+```
+
+Implementación real: `execGHRunner` (usa `os/exec`).
+Implementación test: `mockGHRunner`.
+
+### `EnvWriter` — abstrae escritura de `.env`
+
+```go
+// EnvWriter abstracts writing a key=value pair to the .env file.
+type EnvWriter interface {
+    WriteKey(path, key, value string) error
+}
+```
+
+Implementación real: `fileEnvWriter` (lee el archivo, actualiza o añade la línea).
+Implementación test: `mockEnvWriter`.
+
+## Constantes nuevas — ubicación exacta
+
+### `goflare/config.go` — env keys (junto a las existentes PROJECT_NAME, CLOUDFLARE_ACCOUNT_ID)
+
+Los env keys ya existentes (`PROJECT_NAME`, `CLOUDFLARE_ACCOUNT_ID`) están como string literals
+en `LoadConfigFromEnv`. **Extraerlos como constantes exportadas** en `config.go` para que
+`d1init.go` y los tests los referencien sin duplicar strings:
+
+```go
+// goflare/config.go — añadir al inicio del archivo, antes de LoadConfigFromEnv
+const (
+    EnvKeyProjectName    = "PROJECT_NAME"
+    EnvKeyAccountID      = "CLOUDFLARE_ACCOUNT_ID"
+    EnvKeyWorkerName     = "WORKER_NAME"
+    EnvKeyDomain         = "DOMAIN"
+    EnvKeyEntry          = "ENTRY"
+    EnvKeyPublicDir      = "PUBLIC_DIR"
+    EnvKeyCompilerMode   = "COMPILER_MODE"
+    EnvKeyD1DatabaseID   = "D1_DATABASE_ID"    // nuevo — usado por d1init y test de integración
+    EnvKeyD1DatabaseName = "D1_DATABASE_NAME"  // nuevo — nombre lógico de la DB (default: PROJECT_NAME)
+)
+```
+
+Actualizar el `switch key` en `LoadConfigFromEnv` y el fallback OS env para usar estas constantes
+en lugar de los strings literales actuales.
+
+**NO modificar `WriteEnvFile`** — la escritura de `D1_DATABASE_ID` la maneja exclusivamente
+`fileEnvWriter.WriteKey` en el flujo `d1 init`. `WriteEnvFile` solo se usa en `goflare init`.
+
+Añadir a `Config` struct:
+```go
+D1DatabaseID   string // D1_DATABASE_ID   — set by `goflare d1 init`
+D1DatabaseName string // D1_DATABASE_NAME — optional, default: ProjectName
+```
+
+Añadir lectura de `EnvKeyD1DatabaseID` y `EnvKeyD1DatabaseName` al `switch key` en
+`LoadConfigFromEnv`.
+
+### `goflare/d1init.go` — errores y constantes GitHub (solo usadas en el flujo d1 init)
+
+```go
+// goflare/d1init.go
+import . "github.com/tinywasm/fmt"
+
+var (
+    ErrNoToken     = Err("not authenticated: run 'goflare auth' first")
+    ErrNoAccountID = Err("CLOUDFLARE_ACCOUNT_ID missing: run 'goflare init' first")
+    ErrNoDBName    = Err("database name is required (set PROJECT_NAME in .env)")
+)
+
+const (
+    GHSecretToken   = "CLOUDFLARE_API_TOKEN"  // va como Secret en GitHub
+    GHVarAccountID  = "CLOUDFLARE_ACCOUNT_ID" // va como Variable en GitHub
+    GHVarDatabaseID = "D1_DATABASE_ID"        // va como Variable en GitHub
+)
+```
+
+Los errores son `var` de tipo `error` (no `const string`) para permitir `errors.Is` en los tests.
+
+## `RunD1Init` — función de librería
+
+**Orden de pasos:** cargar config ANTES de leer el token, para construir la keyring key
+`"goflare/" + cfg.ProjectName`. Esto evita pasar la key como parámetro extra.
+
+```go
+// RunD1Init implements `goflare d1 init`.
+// Flow matches docs/diagrams/CLOUDFLARE_GH_ENV_FLOW.md exactly.
+func RunD1Init(envPath, dbName string, store Store, d1 D1Manager, gh GHRunner, w EnvWriter, out io.Writer) error {
+    // 1. Load config from .env (needed to build the keyring key)
+    cfg, _ := LoadConfigFromEnv(envPath)
+
+    // 2. Token from keyring — key: "goflare/<project>"
+    token, err := store.Get("goflare/" + cfg.ProjectName)
+    if err != nil || token == "" {
+        return ErrNoToken
+    }
+
+    // 3. AccountID from .env
+    if cfg.AccountID == "" {
+        return ErrNoAccountID
+    }
+
+    // 4. DB name: flag > PROJECT_NAME
+    if dbName == "" {
+        dbName = cfg.ProjectName
+    }
+    if dbName == "" {
+        return ErrNoDBName
+    }
+
+    // 5. List existing D1 databases
+    dbs, err := d1.ListD1Databases(cfg.AccountID)
+    if err != nil {
+        return err
+    }
+
+    // 6. Find or create
+    var dbID string
+    for _, db := range dbs {
+        if db.Name == dbName {
+            dbID = db.UUID
+            Fprintf(out, "D1: reusing existing database %q (%s)\n", dbName, dbID)
+            break
+        }
+    }
+    if dbID == "" {
+        created, err := d1.CreateD1Database(cfg.AccountID, dbName)
+        if err != nil {
+            return err
+        }
+        dbID = created.UUID
+        Fprintf(out, "D1: created database %q (%s)\n", dbName, dbID)
+    }
+
+    // 7. Write D1_DATABASE_ID to .env
+    if err := w.WriteKey(envPath, EnvKeyD1DatabaseID, dbID); err != nil {
+        return err
+    }
+
+    // 8. GitHub via gh CLI
+    if !gh.Available() {
+        Fprintf(out, "gh CLI not found. Set manually:\n")
+        Fprintf(out, "  gh secret set %s --body %q\n", GHSecretToken, token)
+        Fprintf(out, "  gh variable set %s --body %q\n", GHVarAccountID, cfg.AccountID)
+        Fprintf(out, "  gh variable set %s --body %q\n", GHVarDatabaseID, dbID)
+        return nil
+    }
+
+    repo, err := gh.RemoteURL()
+    if err != nil {
+        return err
+    }
+    gh.SetSecret(repo, GHSecretToken, token)
+    gh.SetVariable(repo, GHVarAccountID, cfg.AccountID)
+    gh.SetVariable(repo, GHVarDatabaseID, dbID)
+    Fprintln(out, "GitHub: secrets and variables configured.")
+    return nil
+}
+```
 
 ## Changes
 
-### Stage 1 — `goflare/d1/client.go` (new file, `//go:build !wasm`)
+### Stage 0 — añadir `//go:build !wasm` a archivos host-only existentes
 
-New file. `//go:build !wasm` keeps stdlib out of the WASM binary entirely.
-No imports from parent `goflare` package (avoids circular dependency).
+**Deuda técnica existente.** Ninguno de los archivos del paquete raíz `goflare` tiene el build
+tag, pero todos usan stdlib pesada o dependencias incompatibles con WASM. Añadir `//go:build !wasm`
+como primera línea en cada uno de ellos antes de cualquier otro cambio.
 
+Archivos a etiquetar — confirmados por imports:
+
+| Archivo | Razón |
+|---|---|
+| `goflare/auth.go` | `os/exec`, `go-keyring`, `net/http` |
+| `goflare/build.go` | `tinywasm/client`, `tinywasm/assetmin`, `tinywasm/gobuild` |
+| `goflare/cloudflare.go` | `net/http`, `os`, `bufio`, `mime/multipart` |
+| `goflare/config.go` | `os`, `bufio` (lee `.env` del filesystem) |
+| `goflare/goflare.go` | `tinywasm/client`, `tinywasm/assetmin`, `tinywasm/js` |
+| `goflare/init.go` | `os`, `bufio` (wizard interactivo, escribe filesystem) |
+| `goflare/javascripts.go` | `os`, `embed`, `tdewolff/minify` |
+| `goflare/mode.go` | `os`, `bufio` |
+| `goflare/run.go` | `net/http`, `go-keyring` |
+| `goflare/store.go` | `go-keyring` |
+
+Archivos que **no** llevan el tag (compartidos o ya etiquetados):
+
+| Archivo | Razón |
+|---|---|
+| `goflare/devtui.go` | solo métodos sobre `Goflare` sin imports stdlib pesada |
+| `goflare/events.go` | solo `path/filepath` — revisar; si solo lo usa el host, añadir tag |
+| `goflare/pages.go` | revisar imports antes de decidir |
+| `goflare/workers.go` | revisar imports antes de decidir |
+| `goflare/wasm.go` | genera el archivo WASM — es host-only; añadir `//go:build !wasm` |
+
+Para cada archivo de la lista "a etiquetar", insertar como primera línea:
 ```go
 //go:build !wasm
+```
+seguido de una línea en blanco antes del `package goflare`.
 
-package d1
+### Stage 1 — `goflare/config.go` — extraer env keys como constantes
 
-import (
-    "bytes"
-    "encoding/json"
-    "fmt"
-    "io"
-    "net/http"
+**Archivo existente — solo modificaciones.**
 
-    "github.com/tinywasm/orm"
-    "github.com/tinywasm/sqlt"
-)
+1. Añadir el bloque `const` con `EnvKeyProjectName`, `EnvKeyAccountID`, ..., `EnvKeyD1DatabaseID`,
+   `EnvKeyD1DatabaseName` al inicio del archivo (antes de `LoadConfigFromEnv`).
+2. Reemplazar todos los string literals dentro del `switch key` en `LoadConfigFromEnv`
+   y en el bloque de fallback OS env por las constantes correspondientes.
+3. Añadir lectura de `EnvKeyD1DatabaseID` y `EnvKeyD1DatabaseName` al `switch key`
+   y guardarlos en `Config.D1DatabaseID` y `Config.D1DatabaseName` (campos nuevos en `Config`).
+4. Añadir a `Config` struct:
+   ```go
+   D1DatabaseID   string // D1_DATABASE_ID   — set by `goflare d1 init`
+   D1DatabaseName string // D1_DATABASE_NAME — optional, default: ProjectName
+   ```
+5. **No tocar `WriteEnvFile`** — no escribe campos D1.
 
-const (
-    cfD1APIBase   = "https://api.cloudflare.com/client/v4"
-    cfD1QueryPath = "/accounts/%s/d1/database/%s/query"
-)
+### Stage 2 — `goflare/d1init.go` (new file)
 
-// directAdapter implements orm.Executor over the Cloudflare D1 REST API.
-// Used only on the host (integration tests). Production uses adapter (JS binding).
-type directAdapter struct {
-    client *d1RestClient
-}
+**Nuevo archivo en el paquete `goflare`** (no en `d1/` — opera a nivel de proyecto, no de DB).
 
-type d1RestClient struct {
-    token      string
-    accountID  string
-    databaseID string
-    httpClient *http.Client
-    baseURL    string
-}
+Primera línea obligatoria:
+```go
+//go:build !wasm
+```
 
-type d1QueryRequest struct {
-    SQL    string `json:"sql"`
-    Params []any  `json:"params"`
-}
+Contiene en este orden:
+1. Dot-import: `. "github.com/tinywasm/fmt"`
+2. Errores sentinela: `var ErrNoToken`, `ErrNoAccountID`, `ErrNoDBName`
+3. Constantes GitHub: `GHSecretToken`, `GHVarAccountID`, `GHVarDatabaseID`
+4. Interfaces: `D1Manager`, `GHRunner`, `EnvWriter`
+5. Tipo: `D1Database`
+6. Función: `RunD1Init` (lógica del diagrama — ver pseudocódigo arriba)
+7. Implementaciones reales: `cfD1Manager`, `execGHRunner`, `fileEnvWriter`
 
-type d1QueryResult struct {
-    Results []map[string]any `json:"results"`
-    Success bool             `json:"success"`
-}
+`cfD1Manager` usa el `cfClient` unexported existente en `cloudflare.go`:
+```go
+type cfD1Manager struct{ client *cfClient }
 
-type d1RestEnvelope struct {
-    Success bool            `json:"success"`
-    Errors  []d1RestError   `json:"errors"`
-    Result  []d1QueryResult `json:"result"`
-}
-
-type d1RestError struct {
-    Code    int    `json:"code"`
-    Message string `json:"message"`
-}
-
-// NewDirect opens a D1 database via the REST API and returns an *orm.DB.
-// Uses the same sqlt.NewCompiler() as the WASM adapter — identical SQL generation path.
-// token, accountID, databaseID come from keyring or env vars (never hardcoded).
-func NewDirect(token, accountID, databaseID string) (*orm.DB, error) {
-    if token == "" || accountID == "" || databaseID == "" {
-        return nil, fmt.Errorf(errPrefix + "token, accountID and databaseID are required")
-    }
-    a := &directAdapter{
-        client: &d1RestClient{
-            token:      token,
-            accountID:  accountID,
-            databaseID: databaseID,
-            httpClient: http.DefaultClient,
-            baseURL:    cfD1APIBase,
-        },
-    }
-    return orm.New(a, sqlt.NewCompiler()), nil
-}
-
-func (c *d1RestClient) do(sql string, params []any) ([]map[string]any, error) {
-    if params == nil {
-        params = []any{}
-    }
-    body, err := json.Marshal(d1QueryRequest{SQL: sql, Params: params})
-    if err != nil {
-        return nil, fmt.Errorf(errPrefix+"marshal: %w", err)
-    }
-    path := fmt.Sprintf(cfD1QueryPath, c.accountID, c.databaseID)
-    req, err := http.NewRequest(http.MethodPost, c.baseURL+path, bytes.NewReader(body))
-    if err != nil {
-        return nil, fmt.Errorf(errPrefix+"request: %w", err)
-    }
-    req.Header.Set("Authorization", "Bearer "+c.token)
-    req.Header.Set("Content-Type", "application/json")
-
-    resp, err := c.httpClient.Do(req)
-    if err != nil {
-        return nil, fmt.Errorf(errPrefix+"http: %w", err)
-    }
-    defer resp.Body.Close()
-
-    data, err := io.ReadAll(resp.Body)
-    if err != nil {
-        return nil, fmt.Errorf(errPrefix+"read: %w", err)
-    }
-    var env d1RestEnvelope
-    if err := json.Unmarshal(data, &env); err != nil {
-        return nil, fmt.Errorf(errPrefix+"parse: %w", err)
-    }
-    if !env.Success {
-        if len(env.Errors) > 0 {
-            return nil, fmt.Errorf(errPrefix+"%s (code: %d)", env.Errors[0].Message, env.Errors[0].Code)
-        }
-        return nil, fmt.Errorf(errPrefix + "success=false")
-    }
-    if len(env.Result) == 0 {
-        return nil, nil
-    }
-    return env.Result[0].Results, nil
-}
-
-// Exec implements orm.Executor for INSERT / UPDATE / DELETE.
-func (a *directAdapter) Exec(query string, args ...any) error {
-    _, err := a.client.do(query, args)
-    return err
-}
-
-// QueryRow implements orm.Executor for single-row SELECT.
-func (a *directAdapter) QueryRow(query string, args ...any) orm.Scanner {
-    rows, err := a.client.do(query, args)
-    if err != nil {
-        return &errScanner{err}
-    }
-    if len(rows) == 0 {
-        return &errScanner{orm.ErrNotFound}
-    }
-    return &directRowScanner{row: rows[0]}
-}
-
-// Query implements orm.Executor for multi-row SELECT.
-func (a *directAdapter) Query(query string, args ...any) (orm.Rows, error) {
-    rows, err := a.client.do(query, args)
+func (m *cfD1Manager) ListD1Databases(accountID string) ([]D1Database, error) {
+    path := Sprintf("/accounts/%s/d1/database", accountID)
+    data, err := m.client.get(path)
     if err != nil {
         return nil, err
     }
-    return &directRows{rows: rows}, nil
+    // unmarshal []D1Database from data["result"]
+    var result []D1Database
+    // json.Unmarshal into result
+    return result, nil
 }
 
-func (a *directAdapter) Close() error { return nil }
-
-// directRowScanner scans a single row from the REST response (map[string]any).
-type directRowScanner struct{ row map[string]any }
-
-func (s *directRowScanner) Scan(dest ...any) error {
-    i := 0
-    for _, v := range s.row {
-        if i >= len(dest) {
-            break
-        }
-        if err := orm.ScanAny(v, dest[i]); err != nil {
-            return err
-        }
-        i++
+func (m *cfD1Manager) CreateD1Database(accountID, name string) (D1Database, error) {
+    path := Sprintf("/accounts/%s/d1/database", accountID)
+    body, _ := json.Marshal(map[string]string{"name": name})
+    data, err := m.client.post(path, body)
+    if err != nil {
+        return D1Database{}, err
     }
-    return nil
+    // unmarshal D1Database from data["result"]
+    var result D1Database
+    // json.Unmarshal into result
+    return result, nil
 }
-
-// directRows iterates over REST response rows.
-type directRows struct {
-    rows []map[string]any
-    cur  int
-}
-
-func (r *directRows) Next() bool {
-    if r.cur < len(r.rows) {
-        r.cur++
-        return true
-    }
-    return false
-}
-
-func (r *directRows) Scan(dest ...any) error {
-    row := r.rows[r.cur-1]
-    i := 0
-    for _, v := range row {
-        if i >= len(dest) {
-            break
-        }
-        if err := orm.ScanAny(v, dest[i]); err != nil {
-            return err
-        }
-        i++
-    }
-    return nil
-}
-
-func (r *directRows) Close() error { return nil }
-func (r *directRows) Err() error   { return nil }
 ```
 
-### Stage 2 — `goflare/d1/d1_integration_test.go` (new file)
+`fileEnvWriter.WriteKey` reads `.env`, replaces the line if key exists, appends if not.
 
-The test uses `d1.NewDirect()` → `orm.DB` — the same API as the edge Worker.
-The model `testItem` is defined inline (test-only); its `Schema()`/`Pointers()`/`ModelName()`
-are written manually here because `ormc` is not run on test-only structs.
+`execGHRunner`:
+- `Available()` → `exec.LookPath("gh") == nil`
+- `RemoteURL()` → `exec.Command("git", "remote", "get-url", "origin")`
+- `SetSecret()` → `exec.Command("gh", "secret", "set", name, "--body", value, "--repo", repo)`
+- `SetVariable()` → `exec.Command("gh", "variable", "set", name, "--body", value, "--repo", repo)`
+
+### Stage 3 — `goflare/run.go` — `RunD1InitCmd` wrapper
+
+Add to `run.go`:
+```go
+func RunD1InitCmd(envPath, dbName string) error {
+    store := NewKeyringStore()
+    client := &cfClient{baseURL: cfAPIBase, httpClient: http.DefaultClient}
+    // token se obtiene dentro de RunD1Init via store — no se lee aquí para evitar doble lectura
+    return RunD1Init(envPath, dbName, store, &cfD1Manager{client}, &execGHRunner{}, &fileEnvWriter{}, os.Stdout)
+}
+```
+
+**Nota:** `cfClient` se construye sin token aquí porque `RunD1Init` valida el token primero
+y el `cfD1Manager` solo necesita el client cuando llega al paso 5 (list/create). El token
+se inyecta en las llamadas HTTP via el `cfClient` que recibe el token en su campo — actualizar
+`cfD1Manager` para recibir el token en `ListD1Databases`/`CreateD1Database`, o alternativamente
+pasar el token al `cfClient` dentro de `RunD1InitCmd` tras que `RunD1Init` lo haya validado.
+
+La forma más simple: `cfD1Manager` recibe el token en construcción igual que los otros clients:
+```go
+func RunD1InitCmd(envPath, dbName string) error {
+    store := NewKeyringStore()
+    cfg, _ := LoadConfigFromEnv(envPath)
+    token, _ := store.Get("goflare/" + cfg.ProjectName)
+    // token puede estar vacío — RunD1Init retornará ErrNoToken antes de usar d1
+    client := &cfClient{token: token, baseURL: cfAPIBase, httpClient: http.DefaultClient}
+    return RunD1Init(envPath, dbName, store, &cfD1Manager{client}, &execGHRunner{}, &fileEnvWriter{}, os.Stdout)
+}
+```
+
+### Stage 4 — `cmd/goflare/main.go` — subcomando `d1 init`
+
+Agregar al `switch cmd`. **El subcomando se extrae ANTES de llamar a `fs.Parse`** para evitar
+que `flag` intente parsear "init" como un flag y falle:
 
 ```go
-//go:build integration && !wasm
+case "d1":
+    sub := ""
+    if len(os.Args) >= 3 {
+        sub = os.Args[2]
+    }
+    var dbName string
+    fs.StringVar(&dbName, "db-name", "", "D1 database name (default: PROJECT_NAME)")
+    fs.Parse(os.Args[3:])
+    switch sub {
+    case "init":
+        err = goflare.RunD1InitCmd(env, dbName)
+    default:
+        fmt.Fprintf(os.Stderr, "unknown d1 subcommand: %s\n", sub)
+        os.Exit(1)
+    }
+```
 
-package d1_test
+Actualizar `goflare.Usage()` para incluir el nuevo subcomando.
+
+### Stage 5 — `goflare/tests/d1init_test.go` (new file) — tests del diagrama
+
+**Nuevo archivo en `tests/`. Package `goflare_test` (caja negra — solo exportados).**
+Va en `tests/` porque no necesita variables internas del paquete.
+
+Primera línea obligatoria:
+```go
+//go:build !wasm
+```
+
+Los mocks se declaran en este mismo archivo. **Usar `goflare.NewMemoryStore()` en lugar de
+un `mockStore` propio** — `MemoryStore` ya existe y es exportado en `store.go`.
+
+```go
+package goflare_test
 
 import (
+    "io"
     "os"
+    "path/filepath"
+    "strings"
     "testing"
 
-    "github.com/tinywasm/goflare/d1"
-    "github.com/tinywasm/orm"
-    keyring "github.com/zalando/go-keyring"
+    . "github.com/tinywasm/fmt"
+    "github.com/tinywasm/goflare"
 )
 
+// Test fixtures — all hardcoded values in one place for easy change.
 const (
-    envKeyToken      = "CLOUDFLARE_API_TOKEN"
-    envKeyAccountID  = "CLOUDFLARE_ACCOUNT_ID"
-    envKeyDatabaseID = "D1_DATABASE_ID"
-    keyringService   = "goflare"
-    testTable        = "_goflare_test"
+    testProject   = "myapp"
+    testAccountID = "acc123"
+    testToken     = "tok"
+    testTokenGH   = "mytoken"      // token usado en el test que verifica GitHub
+    testDBUUID    = "db-uuid-1"    // UUID de DB preexistente
+    testDBUUIDNew = "new-uuid"     // UUID de DB recién creada
+    testDBUUIDGH  = "uuid-gh"      // UUID en test de integración GitHub
+    testDBUUIDMan = "uuid-manual"  // UUID en test de instrucciones manuales
+    testRepoURL   = "https://github.com/org/repo"
+    testKeyring   = "goflare/" + testProject
 )
 
-// testItem is a minimal model for the integration test.
-// ormc is not used for test-only structs — methods are written inline.
-type testItem struct {
-    ID   int    `json:"id"`
-    Name string `json:"name"`
-}
-
-func (m *testItem) ModelName() string { return testTable }
-func (m *testItem) Schema() []orm.Field {
-    return []orm.Field{
-        {Name: "id", PK: true},
-        {Name: "name"},
-    }
-}
-func (m *testItem) Pointers() []any { return []any{&m.ID, &m.Name} }
-
-func resolveToken(t *testing.T) string {
+// testEnv escribe un .env en un directorio temporal y retorna el path.
+func testEnv(t *testing.T, lines string) string {
     t.Helper()
-    token, err := keyring.Get(keyringService, envKeyToken)
-    if err == nil && token != "" {
-        return token
-    }
-    token = os.Getenv(envKeyToken)
-    if token != "" {
-        return token
-    }
-    t.Skip("no token: run 'goflare auth' locally or set CLOUDFLARE_API_TOKEN in CI")
-    return ""
+    path := filepath.Join(t.TempDir(), ".env")
+    os.WriteFile(path, []byte(lines), 0644)
+    return path
 }
 
-func resolveEnv(t *testing.T, key string) string {
+// testSetup retorna el envPath con PROJECT_NAME + CLOUDFLARE_ACCOUNT_ID y un store
+// con el token ya cargado. Es el setup estándar para la mayoría de los tests.
+func testSetup(t *testing.T, token string) (envPath string, store *goflare.MemoryStore) {
     t.Helper()
-    v := os.Getenv(key)
-    if v == "" {
-        t.Skipf("env var %s not set", key)
-    }
-    return v
+    envPath = testEnv(t, "PROJECT_NAME="+testProject+"\nCLOUDFLARE_ACCOUNT_ID="+testAccountID+"\n")
+    store = goflare.NewMemoryStore()
+    store.Set(testKeyring, token)
+    return
 }
 
-func TestD1Integration(t *testing.T) {
-    token     := resolveToken(t)
-    accountID := resolveEnv(t, envKeyAccountID)
-    dbID      := resolveEnv(t, envKeyDatabaseID)
+// mockD1Manager
+type mockD1Manager struct {
+    listFn   func(accountID string) ([]goflare.D1Database, error)
+    createFn func(accountID, name string) (goflare.D1Database, error)
+}
+func (m *mockD1Manager) ListD1Databases(a string) ([]goflare.D1Database, error) { return m.listFn(a) }
+func (m *mockD1Manager) CreateD1Database(a, n string) (goflare.D1Database, error) { return m.createFn(a, n) }
 
-    db, err := d1.NewDirect(token, accountID, dbID)
-    if err != nil {
-        t.Fatalf("NewDirect: %v", err)
-    }
-    defer db.Close()
+// mockGHRunner
+type mockGHRunner struct {
+    available bool
+    secrets   map[string]string
+    variables map[string]string
+    remoteURL string
+}
+func (m *mockGHRunner) Available() bool                               { return m.available }
+func (m *mockGHRunner) RemoteURL() (string, error)                    { return m.remoteURL, nil }
+func (m *mockGHRunner) SetSecret(_, name, value string) error         { m.secrets[name] = value; return nil }
+func (m *mockGHRunner) SetVariable(_, name, value string) error       { m.variables[name] = value; return nil }
 
-    // Setup table — same call as in the edge Worker
-    if err := db.CreateTable(&testItem{}); err != nil {
-        t.Fatalf("CreateTable: %v", err)
-    }
-    t.Cleanup(func() {
-        db.DropTable(&testItem{}) //nolint
-    })
+// mockEnvWriter
+type mockEnvWriter struct{ written map[string]string }
+func (m *mockEnvWriter) WriteKey(_, key, value string) error { m.written[key] = value; return nil }
 
-    // Create
-    item := &testItem{ID: 1, Name: "hello"}
-    if err := db.Create(item); err != nil {
-        t.Fatalf("Create: %v", err)
+// --- Tests matching CLOUDFLARE_GH_ENV_FLOW.md nodes ---
+
+// Node: Token no encontrado → error (ProjectName vacío → key "goflare/" → ErrNoToken)
+func TestD1Init_NoToken(t *testing.T) {
+    store := goflare.NewMemoryStore() // vacío — Get retorna ErrNotFound
+    err := goflare.RunD1Init("", "", store, nil, nil, nil, io.Discard)
+    if !errors.Is(err, goflare.ErrNoToken) {
+        t.Fatalf("expected ErrNoToken, got: %v", err)
+    }
+}
+
+// Node: AccountID no en .env → error
+func TestD1Init_NoAccountID(t *testing.T) {
+    envPath := testEnv(t, "PROJECT_NAME="+testProject+"\n") // sin CLOUDFLARE_ACCOUNT_ID
+    store := goflare.NewMemoryStore()
+    store.Set(testKeyring, testToken)
+
+    err := goflare.RunD1Init(envPath, "", store, nil, nil, nil, io.Discard)
+    if !errors.Is(err, goflare.ErrNoAccountID) {
+        t.Fatalf("expected ErrNoAccountID, got: %v", err)
+    }
+}
+
+// Node: DB ya existe → reutiliza, NO llama CreateD1Database
+func TestD1Init_DBAlreadyExists(t *testing.T) {
+    envPath, store := testSetup(t, testToken)
+
+    createCalled := false
+    d1 := &mockD1Manager{
+        listFn: func(_ string) ([]goflare.D1Database, error) {
+            return []goflare.D1Database{{UUID: testDBUUID, Name: testProject}}, nil
+        },
+        createFn: func(_, _ string) (goflare.D1Database, error) {
+            createCalled = true
+            return goflare.D1Database{}, nil
+        },
+    }
+    w := &mockEnvWriter{written: map[string]string{}}
+    gh := &mockGHRunner{available: false}
+
+    err := goflare.RunD1Init(envPath, "", store, d1, gh, w, io.Discard)
+    if err != nil { t.Fatalf("unexpected error: %v", err) }
+    if createCalled { t.Fatal("CreateD1Database must not be called when DB already exists") }
+    if w.written[goflare.EnvKeyD1DatabaseID] != testDBUUID {
+        t.Fatalf("expected D1_DATABASE_ID=%s, got %q", testDBUUID, w.written[goflare.EnvKeyD1DatabaseID])
+    }
+}
+
+// Node: DB no existe → crea, escribe ID en .env
+func TestD1Init_DBNotExists_Creates(t *testing.T) {
+    envPath, store := testSetup(t, testToken)
+
+    d1 := &mockD1Manager{
+        listFn:   func(_ string) ([]goflare.D1Database, error) { return nil, nil },
+        createFn: func(_, name string) (goflare.D1Database, error) {
+            return goflare.D1Database{UUID: testDBUUIDNew, Name: name}, nil
+        },
+    }
+    w := &mockEnvWriter{written: map[string]string{}}
+    gh := &mockGHRunner{available: false}
+
+    err := goflare.RunD1Init(envPath, "", store, d1, gh, w, io.Discard)
+    if err != nil { t.Fatalf("unexpected error: %v", err) }
+    if w.written[goflare.EnvKeyD1DatabaseID] != testDBUUIDNew {
+        t.Fatalf("expected D1_DATABASE_ID=%s, got %q", testDBUUIDNew, w.written[goflare.EnvKeyD1DatabaseID])
+    }
+}
+
+// Node: gh disponible → SetSecret para token, SetVariable para accountID y dbID
+func TestD1Init_GHAvailable_SetsCorrectly(t *testing.T) {
+    envPath, store := testSetup(t, testTokenGH)
+
+    d1 := &mockD1Manager{
+        listFn:   func(_ string) ([]goflare.D1Database, error) { return nil, nil },
+        createFn: func(_, _ string) (goflare.D1Database, error) {
+            return goflare.D1Database{UUID: testDBUUIDGH, Name: testProject}, nil
+        },
+    }
+    w := &mockEnvWriter{written: map[string]string{}}
+    gh := &mockGHRunner{
+        available: true,
+        remoteURL: testRepoURL,
+        secrets:   map[string]string{},
+        variables: map[string]string{},
     }
 
-    // Read one
-    got := &testItem{}
-    if err := db.First(got, orm.Where("id", 1)); err != nil {
-        t.Fatalf("First: %v", err)
-    }
-    if got.Name != "hello" {
-        t.Fatalf("expected name=hello, got %q", got.Name)
-    }
+    err := goflare.RunD1Init(envPath, "", store, d1, gh, w, io.Discard)
+    if err != nil { t.Fatalf("unexpected error: %v", err) }
 
-    // Update
-    item.Name = "world"
-    if err := db.Save(item); err != nil {
-        t.Fatalf("Save: %v", err)
+    // Token → Secret
+    if gh.secrets[goflare.GHSecretToken] != testTokenGH {
+        t.Fatalf("CLOUDFLARE_API_TOKEN must be set as Secret, got: %v", gh.secrets)
     }
+    // AccountID → Variable (not Secret)
+    if gh.variables[goflare.GHVarAccountID] != testAccountID {
+        t.Fatalf("CLOUDFLARE_ACCOUNT_ID must be set as Variable, got: %v", gh.variables)
+    }
+    if _, isSecret := gh.secrets[goflare.GHVarAccountID]; isSecret {
+        t.Fatal("CLOUDFLARE_ACCOUNT_ID must NOT be a Secret")
+    }
+    // D1 ID → Variable (not Secret)
+    if gh.variables[goflare.GHVarDatabaseID] != testDBUUIDGH {
+        t.Fatalf("D1_DATABASE_ID must be set as Variable, got: %v", gh.variables)
+    }
+    if _, isSecret := gh.secrets[goflare.GHVarDatabaseID]; isSecret {
+        t.Fatal("D1_DATABASE_ID must NOT be a Secret")
+    }
+}
 
-    // Verify update
-    got2 := &testItem{}
-    if err := db.First(got2, orm.Where("id", 1)); err != nil {
-        t.Fatalf("First after Save: %v", err)
+// Node: ListD1Databases falla → propaga error
+func TestD1Init_ListFails(t *testing.T) {
+    envPath, store := testSetup(t, testToken)
+    apiErr := Err("api error")
+    d1 := &mockD1Manager{
+        listFn: func(_ string) ([]goflare.D1Database, error) { return nil, apiErr },
     }
-    if got2.Name != "world" {
-        t.Fatalf("expected name=world after update, got %q", got2.Name)
+    err := goflare.RunD1Init(envPath, "", store, d1, &mockGHRunner{}, &mockEnvWriter{written: map[string]string{}}, io.Discard)
+    if !errors.Is(err, apiErr) {
+        t.Fatalf("expected api error to propagate, got: %v", err)
     }
+}
 
-    // Delete
-    if err := db.Delete(item); err != nil {
-        t.Fatalf("Delete: %v", err)
+// Node: CreateD1Database falla → propaga error
+func TestD1Init_CreateFails(t *testing.T) {
+    envPath, store := testSetup(t, testToken)
+    apiErr := Err("create error")
+    d1 := &mockD1Manager{
+        listFn:   func(_ string) ([]goflare.D1Database, error) { return nil, nil },
+        createFn: func(_, _ string) (goflare.D1Database, error) { return goflare.D1Database{}, apiErr },
     }
+    err := goflare.RunD1Init(envPath, "", store, d1, &mockGHRunner{}, &mockEnvWriter{written: map[string]string{}}, io.Discard)
+    if !errors.Is(err, apiErr) {
+        t.Fatalf("expected create error to propagate, got: %v", err)
+    }
+}
 
-    // Verify gone
-    got3 := &testItem{}
-    err = db.First(got3, orm.Where("id", 1))
-    if err != orm.ErrNotFound {
-        t.Fatalf("expected ErrNotFound after delete, got: %v", err)
+// Node: gh no disponible → imprime instrucciones manuales con los valores
+func TestD1Init_GHNotAvailable_PrintsInstructions(t *testing.T) {
+    envPath, store := testSetup(t, testToken)
+
+    d1 := &mockD1Manager{
+        listFn:   func(_ string) ([]goflare.D1Database, error) { return nil, nil },
+        createFn: func(_, _ string) (goflare.D1Database, error) {
+            return goflare.D1Database{UUID: testDBUUIDMan, Name: testProject}, nil
+        },
+    }
+    w := &mockEnvWriter{written: map[string]string{}}
+    gh := &mockGHRunner{available: false}
+
+    var buf strings.Builder
+    err := goflare.RunD1Init(envPath, "", store, d1, gh, w, &buf)
+    if err != nil { t.Fatalf("unexpected error: %v", err) }
+
+    out := buf.String()
+    if !strings.Contains(out, goflare.GHSecretToken) {
+        t.Fatal("output must mention CLOUDFLARE_API_TOKEN")
+    }
+    if !strings.Contains(out, goflare.GHVarAccountID) {
+        t.Fatal("output must mention CLOUDFLARE_ACCOUNT_ID")
+    }
+    if !strings.Contains(out, testDBUUIDMan) {
+        t.Fatalf("output must include the database ID (%s)", testDBUUIDMan)
     }
 }
 ```
 
-### Stage 3 — `goflare/go.mod`
+### Stage 6 — `goflare/go.mod`
 
-`go-keyring` is already in `go.mod`. No new dependencies needed.
+No new dependencies. `os/exec` is stdlib. `tinywasm/fmt` ya está en `go.mod`.
 
 Run:
 ```bash
@@ -411,11 +640,15 @@ go mod tidy
 
 ## Stages Summary
 
-| # | Archivo | Acción |
-|---|---|---|
-| 1 | `goflare/d1/client.go` | Nuevo (`//go:build !wasm`): `directAdapter`, `NewDirect`, `d1RestClient`, `directRows`, `directRowScanner` — escaneo via `orm.ScanAny` |
-| 2 | `goflare/d1/d1_integration_test.go` | Nuevo (`//go:build integration && !wasm`): `TestD1Integration` usando `orm.DB` via `d1.NewDirect` |
-| 3 | `goflare/go.mod` | `go mod tidy` |
+| # | Archivo | Tipo | Acción |
+|---|---|---|---|
+| 0 | `goflare/*.go` (10 archivos) | Existente | Añadir `//go:build !wasm` — eliminar deuda técnica antes de nuevos cambios |
+| 1 | `goflare/config.go` | Existente | Constantes `EnvKey*`; campos `D1DatabaseID`/`D1DatabaseName` en `Config`; actualizar `LoadConfigFromEnv` con constantes; NO tocar `WriteEnvFile` |
+| 2 | `goflare/d1init.go` | Nuevo | `//go:build !wasm`; `var` errores sentinela; constantes GH; interfaces `D1Manager`/`GHRunner`/`EnvWriter`; `D1Database`; `RunD1Init`; impls reales `cfD1Manager`/`execGHRunner`/`fileEnvWriter`; dot-import `tinywasm/fmt` |
+| 3 | `goflare/run.go` | Existente | Agregar `RunD1InitCmd` wrapper (tag ya añadido en Stage 0) |
+| 4 | `cmd/goflare/main.go` | Existente | Agregar subcomando `d1 init [--db-name]`; subcomando extraído ANTES de `fs.Parse` |
+| 5 | `goflare/tests/d1init_test.go` | Nuevo | `//go:build !wasm`; 8 tests mockeados — nodos del diagrama + propagación de errores API; usa `MemoryStore`; `errors.Is` para comparar errores |
+| 6 | `goflare/go.mod` | Existente | `go mod tidy` |
 
 ## Verification
 
@@ -424,26 +657,10 @@ go install github.com/tinywasm/devflow/cmd/gotest@latest
 gotest
 ```
 
-Normal test suite passes with no regressions (`go vet`, `go test ./...`).
+Todos los tests pasan incluyendo los 8 nuevos de `tests/d1init_test.go`. Sin regresiones.
 
-Integration test (requires credentials):
+Uso manual tras implementación:
 ```bash
-CLOUDFLARE_ACCOUNT_ID=xxx D1_DATABASE_ID=yyy go test -tags=integration -run TestD1Integration ./d1/ -v
-```
-
-The token is read from the OS keyring (set via `goflare auth`) or `CLOUDFLARE_API_TOKEN` env var.
-If neither is set → `t.Skip` (never fails in red).
-
-## CI/CD
-
-Add to `.github/workflows/test.yml` to enable integration tests in CI:
-
-```yaml
-- name: Integration tests (D1)
-  if: secrets.CLOUDFLARE_API_TOKEN != ''
-  env:
-    CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-    CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
-  run: go test -tags=integration -run TestD1Integration ./d1/ -v
+goflare d1 init              # usa PROJECT_NAME como nombre de DB
+goflare d1 init --db-name=contacts-db
 ```

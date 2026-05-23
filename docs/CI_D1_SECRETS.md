@@ -3,21 +3,40 @@
 Los tests de integración (`//go:build integration`) se conectan a la API REST de Cloudflare D1.
 En CI (GitHub Actions) las credenciales se inyectan como **Repository secrets**.
 
-## Secrets requeridos
+## Forma automática (recomendada)
+
+```bash
+goflare d1 init
+```
+
+Crea la DB D1, actualiza `.env`, y configura GitHub automáticamente via `gh` CLI.
+Ver flujo completo en [CLOUDFLARE_GH_ENV_FLOW.md](diagrams/CLOUDFLARE_GH_ENV_FLOW.md).
+
+## Forma manual
+
+### Secret requerido (cifrado)
 
 | Secret | Dónde obtenerlo |
 |--------|----------------|
 | `CLOUDFLARE_API_TOKEN` | [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) → Create Token → Edit Cloudflare Workers |
+
+### Variables requeridas (públicas — no son secretos)
+
+| Variable | Dónde obtenerlo |
+|----------|----------------|
 | `CLOUDFLARE_ACCOUNT_ID` | Dashboard CF → barra lateral derecha → Account ID |
 | `D1_DATABASE_ID` | Workers & Pages → D1 → tu base de datos → Database ID |
 
-## Cómo agregar los secrets en GitHub
+`CLOUDFLARE_ACCOUNT_ID` es un identificador público — también está en [.env.example](../.env.example).
+
+### Cómo agregar en GitHub
 
 Ir a: `github.com/tinywasm/goflare` → **Settings** → **Secrets and variables** → **Actions**
 
 ![GitHub Actions secrets panel](img/github_env_managment.png)
 
-En **Repository secrets** hacer clic en **New repository secret** y agregar los tres secrets uno a uno.
+- **Secret**: pestaña **Secrets** → **New repository secret** → `CLOUDFLARE_API_TOKEN`
+- **Variables**: pestaña **Variables** → **New repository variable** → `CLOUDFLARE_ACCOUNT_ID` y `D1_DATABASE_ID`
 
 ## Comportamiento por entorno
 
