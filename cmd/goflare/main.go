@@ -41,6 +41,21 @@ func main() {
 	case "deploy":
 		fs.Parse(os.Args[2:])
 		err = goflare.RunDeploy(env, os.Stdin, os.Stdout)
+	case "d1":
+		sub := ""
+		if len(os.Args) >= 3 {
+			sub = os.Args[2]
+		}
+		var dbName string
+		fs.StringVar(&dbName, "db-name", "", "D1 database name (default: PROJECT_NAME)")
+		fs.Parse(os.Args[3:])
+		switch sub {
+		case "init":
+			err = goflare.RunD1InitCmd(env, dbName)
+		default:
+			fmt.Fprintf(os.Stderr, "unknown d1 subcommand: %s\n", sub)
+			os.Exit(1)
+		}
 	default:
 		fmt.Fprint(os.Stderr, goflare.Usage())
 		os.Exit(1)

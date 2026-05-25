@@ -1,3 +1,5 @@
+//go:build !wasm
+
 package goflare
 
 import (
@@ -31,6 +33,9 @@ type Config struct {
 
 	// Compiler
 	CompilerMode string // "S" | "M" | "L"  default: "S"
+
+	D1DatabaseID   string // D1_DATABASE_ID   — set by `goflare d1 init`
+	D1DatabaseName string // D1_DATABASE_NAME — optional, default: ProjectName
 }
 
 type Goflare struct {
