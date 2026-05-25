@@ -73,14 +73,17 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.25.2'
 
       - name: Setup TinyGo
+        # Única forma válida de compilar WASM para el edge — no usar go build estándar
         uses: acifani/setup-tinygo@v2
         with:
-          tinygo-version: '0.34.0'
+          tinygo-version: '0.41.1'
 
       - name: Install goflare
+        # go install funciona porque el módulo está publicado en pkg.go.dev.
+        # Cuando haya GitHub Releases con binarios, reemplazar por: gh release download
         run: go install github.com/tinywasm/goflare/cmd/goflare@latest
 
       - name: Build
@@ -109,9 +112,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with: { go-version: '1.23' }
+        with: { go-version: '1.25.2' }
       - uses: acifani/setup-tinygo@v2
-        with: { tinygo-version: '0.34.0' }
+        with: { tinygo-version: '0.41.1' }
       - run: go install github.com/tinywasm/goflare/cmd/goflare@latest
       - run: goflare build
 
