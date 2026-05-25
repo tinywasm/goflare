@@ -19,6 +19,10 @@ import (
 //   - pages (static):  no edge/main.go but PublicDir exists
 //                      → only static + optional frontend wasm
 func (g *Goflare) Build() error {
+	if g.stagingDir != g.Config.OutputDir {
+		defer os.RemoveAll(g.stagingDir)
+	}
+
 	if g.Config.Entry == "" && g.Config.PublicDir == "" {
 		return errors.New("nothing to build: both Entry and PublicDir are empty")
 	}
@@ -70,6 +74,26 @@ func (g *Goflare) Build() error {
 	return nil
 }
 
+// maxWasmSize is the Cloudflare Workers/Pages Free limit for the WASM binary.
+// https://developers.cloudflare.com/workers/platform/limits/#worker-size
+const maxWasmSize = 1 * 1024 * 1024 // 1 MiB
+
+func checkWasmSize(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("wasm size check: %w", err)
+	}
+	size := info.Size()
+	if size > maxWasmSize {
+		return fmt.Errorf(
+			"edge.wasm exceeds Cloudflare Free limit: %d bytes (%.1f KiB) > 1 MiB — "+
+				"reduce binary size or upgrade to a paid plan",
+			size, float64(size)/1024,
+		)
+	}
+	return nil
+}
+
 // buildPagesFunctions compiles edge/main.go to functions/edge.wasm and writes the
 // glue bundle functions/[[path]].mjs (catch-all, exports onRequest only).
 //
@@ -93,10 +117,14 @@ func (g *Goflare) buildPagesFunctions() error {
 		return err
 	}
 
-	srcWasm := filepath.Join(g.Config.OutputDir, "edge.wasm")
+	srcWasm := filepath.Join(g.stagingDir, "edge.wasm")
 	dstWasm := filepath.Join(functionsDir, "edge.wasm")
 	if err := moveFile(srcWasm, dstWasm); err != nil {
 		return fmt.Errorf("failed to move edge.wasm to %s: %w", functionsDir, err)
+	}
+
+	if err := checkWasmSize(dstWasm); err != nil {
+		return err
 	}
 
 	if err := g.generatePagesFunctionFile(); err != nil {
@@ -139,6 +167,21 @@ func (g *Goflare) buildWorker() error {
 
 	// 4. Call generateWorkerFile()
 	if err := g.generateWorkerFile(); err != nil {
+		return err
+	}
+
+	// 5. Move files from staging to OutputDir
+	for _, name := range []string{"edge.wasm", "edge.js"} {
+		src := filepath.Join(g.stagingDir, name)
+		dst := filepath.Join(g.Config.OutputDir, name)
+		if err := moveFile(src, dst); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	// 6. Check WASM size
+	wasmPath := filepath.Join(g.Config.OutputDir, "edge.wasm")
+	if err := checkWasmSize(wasmPath); err != nil {
 		return err
 	}
 

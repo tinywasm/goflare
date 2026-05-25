@@ -25,7 +25,7 @@ var embeddedWorker []byte
 // generateWorkerFile bundles and minifies the three JS assets into a single edge.js
 // for the Workers mode (default OutputDir, exports default { fetch, onRequest, ... }).
 func (g *Goflare) generateWorkerFile() error {
-	dest := filepath.Join(g.Config.OutputDir, "edge.js")
+	dest := filepath.Join(g.stagingDir, "edge.js")
 	return g.bundleJS(dest, "./edge.wasm", false)
 }
 
