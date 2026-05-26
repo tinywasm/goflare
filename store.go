@@ -3,34 +3,17 @@
 package goflare
 
 import (
+	"errors"
 	"sync"
-
-	"github.com/zalando/go-keyring"
 )
 
-// Store abstracts keyring access for testability.
+// Store abstracts access for testability.
 type Store interface {
 	Get(key string) (string, error)
 	Set(key, value string) error
 }
 
-// KeyringStore is the real implementation using go-keyring.
-type KeyringStore struct{}
-
-func NewKeyringStore() *KeyringStore {
-	return &KeyringStore{}
-}
-
-func (s *KeyringStore) Get(key string) (string, error) {
-	return keyring.Get("goflare", key)
-}
-
-func (s *KeyringStore) Set(key, value string) error {
-	if value == "" {
-		return keyring.Delete("goflare", key)
-	}
-	return keyring.Set("goflare", key, value)
-}
+var ErrNotFound = errors.New("not found")
 
 // MemoryStore is an in-memory Store exported for use by library consumers in tests.
 // Safe for concurrent use.
@@ -50,7 +33,7 @@ func (s *MemoryStore) Get(key string) (string, error) {
 	defer s.mu.Unlock()
 	val, ok := s.data[key]
 	if !ok {
-		return "", keyring.ErrNotFound
+		return "", ErrNotFound
 	}
 	return val, nil
 }

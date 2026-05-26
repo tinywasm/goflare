@@ -6,32 +6,18 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 )
 
 // RunAuth runs the auth command.
-func RunAuth(envPath string, in io.Reader, out io.Writer, reset bool, check bool) error {
+func RunAuth(envPath string, out io.Writer, check bool) error {
 	cfg, err := LoadConfigFromEnv(envPath)
 	if err != nil {
 		return err
 	}
 	g := New(cfg)
-	store := NewKeyringStore()
-	key := "goflare/" + cfg.ProjectName
-
-	if reset {
-		store.Set(key, "")
-		fmt.Fprintln(out, "Token reset. Run goflare auth to set a new one.")
-		return nil
-	}
 
 	if check {
-		token, err := store.Get(key)
-		if err != nil || token == "" {
-			fmt.Fprintln(out, "No token saved.")
-			return fmt.Errorf("not authenticated")
-		}
-		if err := g.validateToken(token); err != nil {
+		if err := g.Auth(); err != nil {
 			fmt.Fprintln(out, "Token invalid:", err)
 			return err
 		}
@@ -39,26 +25,7 @@ func RunAuth(envPath string, in io.Reader, out io.Writer, reset bool, check bool
 		return nil
 	}
 
-	return g.Auth(store, in)
-}
-
-// RunInit runs the init command.
-func RunInit(envPath string, in io.Reader, out io.Writer) error {
-	cfg, err := Init(in, out)
-	if err != nil {
-		return err
-	}
-
-	if err := WriteEnvFile(cfg, envPath); err != nil {
-		return err
-	}
-
-	if err := UpdateGitignore("."); err != nil {
-		return err
-	}
-
-	fmt.Fprintln(out, "Init complete. Edit .env if needed, then run: goflare build")
-	return nil
+	return g.Auth()
 }
 
 // RunBuild runs the build command.
@@ -86,7 +53,7 @@ func RunBuild(envPath string, out io.Writer) error {
 }
 
 // RunDeploy runs the deploy command.
-func RunDeploy(envPath string, in io.Reader, out io.Writer) error {
+func RunDeploy(envPath string, out io.Writer) error {
 	cfg, err := LoadConfigFromEnv(envPath)
 	if err != nil {
 		return err
@@ -101,19 +68,18 @@ func RunDeploy(envPath string, in io.Reader, out io.Writer) error {
 		fmt.Fprintln(out, msgs...)
 	})
 
-	store := NewKeyringStore()
-	if err := g.Auth(store, in); err != nil {
+	if err := g.Auth(); err != nil {
 		return err
 	}
 
 	var results []DeployResult
 
 	if cfg.Entry != "" {
-		err := g.DeployWorker(store)
+		err := g.DeployWorker()
 
 		subdomain := "<your-subdomain>"
 		if err == nil {
-			if token, tokenErr := g.GetToken(store); tokenErr == nil {
+			if token, tokenErr := g.token(); tokenErr == nil {
 				client := &cfClient{
 					token:      token,
 					baseURL:    g.BaseURL,
@@ -131,7 +97,7 @@ func RunDeploy(envPath string, in io.Reader, out io.Writer) error {
 	}
 
 	if cfg.PublicDir != "" {
-		err := g.DeployPages(store)
+		err := g.DeployPages()
 		url := fmt.Sprintf("https://%s.pages.dev", cfg.ProjectName)
 		if cfg.Domain != "" {
 			url = "https://" + cfg.Domain
@@ -154,33 +120,21 @@ func RunDeploy(envPath string, in io.Reader, out io.Writer) error {
 	return nil
 }
 
-func RunD1InitCmd(envPath, dbName string) error {
-	store := NewKeyringStore()
-	cfg, _ := LoadConfigFromEnv(envPath)
-	token, _ := store.Get("goflare/" + cfg.ProjectName)
-	// token can be empty — RunD1Init will return ErrNoToken before using d1
-	client := &cfClient{token: token, baseURL: cfAPIBase, httpClient: http.DefaultClient}
-	return RunD1Init(envPath, dbName, store, &cfD1Manager{client}, &execGHRunner{}, &fileEnvWriter{}, os.Stdout)
-}
-
 // Usage returns the usage string.
 func Usage() string {
 	return `Usage: goflare <command> [flags]
 
 Commands:
-  init      Initialize a new project (creates .env)
-  auth      Authenticate with Cloudflare (saves token to keyring)
+  auth      Validate CLOUDFLARE_API_TOKEN from environment
   build     Build the project (compiles WASM and/or copies assets)
-  deploy    Deploy the project to Cloudflare
-  d1 init   Setup D1 database and GitHub secrets
+  deploy    Deploy the project to Cloudflare (requires CLOUDFLARE_API_TOKEN env var)
 
 Flags:
   -env string
 	path to .env file (default ".env")
 
 Auth Flags:
-  -reset    Delete saved token
-  -check    Verify saved token
+  -check    Verify token from environment
 `
 }
 

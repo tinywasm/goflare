@@ -1,11 +1,13 @@
-# Deployment Flow
-
 ```mermaid
 sequenceDiagram
     participant G as GoFlare
+    participant ENV as Environment (CI/Local)
     participant CF as Cloudflare API
 
-    Note over G: After Build & Auth
+    Note over G: After Build
+
+    G->>ENV: os.Getenv("CLOUDFLARE_API_TOKEN")
+    ENV-->>G: Token string
 
     alt Target: Worker (cfg.Entry set)
         G->>CF: PUT /accounts/:id/workers/scripts/:name (Multipart: edge.js + edge.wasm)
@@ -22,17 +24,13 @@ sequenceDiagram
         end
         G->>CF: POST /accounts/:id/pages/projects/:name/uploadToken
         CF-->>G: JWT
-        Note over G: Batch files from PublicDir (max 50 per request)
-        loop Each Batch
+        loop Each Batch (max 50)
             G->>CF: POST /pages/assets/upload (Auth: JWT)
         end
         G->>CF: POST /accounts/:id/pages/projects/:name/deployments (Manifest)
         CF-->>G: 200 OK
-        alt cfg.Domain set
-            G->>CF: POST /accounts/:id/pages/projects/:name/domains
-        end
-        Note over G: URL: https://PROJECT_NAME.pages.dev (or cfg.Domain)
+        Note over G: URL: https://PROJECT_NAME.pages.dev
     end
 
-    G->>User: Deployment Summary (URLs or errors per target)
+    G->>User: Deployment Summary
 ```

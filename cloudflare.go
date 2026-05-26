@@ -73,8 +73,8 @@ func (c *cfClient) do(method, path string, body io.Reader) ([]byte, error) {
 }
 
 // DeployPages uploads the Pages build output (from config.OutputDir) to Cloudflare Pages.
-func (g *Goflare) DeployPages(store Store) error {
-	token, err := g.GetToken(store)
+func (g *Goflare) DeployPages() error {
+	token, err := g.token()
 	if err != nil {
 		return err
 	}
@@ -273,8 +273,8 @@ func (g *Goflare) getWorkerSubdomain(client *cfClient) string {
 	return result.Result.Subdomain
 }
 
-func (g *Goflare) DeployWorker(store Store) error {
-	token, err := g.GetToken(store)
+func (g *Goflare) DeployWorker() error {
+	token, err := g.token()
 	if err != nil {
 		return err
 	}

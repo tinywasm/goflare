@@ -55,7 +55,7 @@ type d1RestError struct {
 
 // NewDirect opens a D1 database via the REST API and returns an *orm.DB.
 // Uses the same sqlt.NewCompiler() as the WASM adapter — identical SQL generation path.
-// token, accountID, databaseID come from keyring or env vars (never hardcoded).
+// token, accountID, databaseID come from environment variables (never hardcoded).
 func NewDirect(token, accountID, databaseID string) (*orm.DB, error) {
 	if token == "" || accountID == "" || databaseID == "" {
 		return nil, fmt.Errorf(errPrefix + "token, accountID and databaseID are required")

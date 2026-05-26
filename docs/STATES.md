@@ -1,230 +1,112 @@
-# Estado del Proyecto — GoFlare
+# Project Status — GoFlare
 
-> **Fecha de evaluación:** 16 de mayo de 2026
-> **Rama analizada:** `claude/review-library-status-ROk9P`
-> **Veredicto general:** 🟢 **LISTO PARA PRODUCCIÓN** (con observaciones menores)
-
----
-
-## 1. Resumen ejecutivo
-
-**GoFlare** es una librería y CLI escrita en Go puro para desplegar aplicaciones Go/WASM en **Cloudflare Workers** (funciones edge) y **Cloudflare Pages** (hosting estático). Elimina la dependencia de Node.js, Wrangler o GitHub Actions integrando directamente:
-
-- Compilación Go → WASM mediante TinyGo
-- Empaquetado y minificación del JavaScript del Worker
-- Integración directa con la API de Cloudflare
-- Almacenamiento seguro de credenciales en el keyring del sistema
-- Asistente interactivo de inicialización de proyecto
-
-**Diseño:** convención sobre configuración, con valores por defecto sensatos y configuración basada en `.env`.
+> **Evaluation Date:** May 22, 2026
+> **General Verdict:** 🟢 **READY FOR PRODUCTION**
 
 ---
 
-## 2. Estado de compilación y pruebas
+## 1. Executive Summary
 
-| Verificación | Resultado |
+**GoFlare** is a library and CLI written in pure Go for deploying Go/WASM applications to **Cloudflare Workers** (edge functions) and **Cloudflare Pages** (static hosting). It eliminates dependency on Node.js, Wrangler, or GitHub Actions by integrating directly:
+
+- Go → WASM compilation using TinyGo
+- Worker JavaScript bundling and minification
+- Direct integration with the Cloudflare API
+- Simplified secret management based on environment/CI (GitHub Secrets)
+
+**Design:** convention over configuration, with sensible defaults and `.env`-based configuration.
+
+---
+
+## 2. Build and Test Status
+
+| Verification | Result |
 |---|---|
-| `go build ./...` | ✅ Compila sin advertencias |
-| `go vet ./...` | ✅ Sin observaciones |
-| `go test ./...` | ✅ 27/27 tests pasan en ~44 ms |
-| TODOs / FIXMEs en el código | ✅ Ninguno |
-| `panic()` en producción | ✅ Ninguno |
-| Funciones vacías / stubs | ✅ Ninguno |
-
-**Total de código de producción:** 2.629 líneas de Go.
+| `go build ./...` | ✅ Compiles without warnings |
+| `go vet ./...` | ✅ No issues found |
+| `go test ./...` | ✅ All tests pass |
+| TODOs / FIXMEs in code | ✅ None |
 
 ---
 
-## 3. Estado por módulo
+## 3. Status by Module
 
-### Módulos en la raíz (1.340 líneas)
+### Root Modules
 
-| Archivo | Líneas | Rol | Estado |
-|---|---|---|---|
-| `cloudflare.go` | 370 | Cliente API de Cloudflare, `DeployPages`, `DeployWorker` | ✅ Completo |
-| `run.go` | 191 | Funciones runner del CLI | ✅ Completo |
-| `init.go` | 148 | Asistente interactivo, generación de `.env`/`.gitignore` | ✅ Completo |
-| `goflare.go` | 145 | Struct `Goflare`, `New()`, dispatcher `Deploy()` | ✅ Completo |
-| `config.go` | 121 | Struct `Config`, parseo de `.env`, validación, defaults | ✅ Completo |
-| `javascripts.go` | 93 | Bundling del JS del Worker, minificación | ✅ Completo |
-| `build.go` | 86 | Orquestación del build (Worker + Pages) | ✅ Completo |
-| `auth.go` | 84 | Validación de tokens, keyring, prompt interactivo | ✅ Completo |
-| `store.go` | 65 | Interfaz `Store`, `KeyringStore`, `MemoryStore` | ✅ Completo |
-| `devtui.go` | 57 | Integración con DevTUI (atajos f/w) | ✅ Funcional |
-| `events.go` | 35 | Handler de eventos del file watcher | ✅ Funcional |
-| `workers.go` / `pages.go` / `wasm.go` | 5 c/u | Wrappers finos para la interfaz DevTUI | ✅ Intencionales, no son stubs |
+| File | Role | Status |
+|---|---|---|
+| `cloudflare.go` | Cloudflare API client, `DeployPages`, `DeployWorker` | ✅ Complete |
+| `run.go` | CLI runner functions | ✅ Complete |
+| `goflare.go` | `Goflare` struct, `New()`, `Deploy()` dispatcher | ✅ Complete |
+| `config.go` | `Config` struct, `.env` parsing, validation, defaults (conventions) | ✅ Complete |
+| `javascripts.go` | Worker JS bundling, minification | ✅ Complete |
+| `build.go` | Build orchestration (Worker + Pages) | ✅ Complete |
+| `auth.go` | Token validation from environment | ✅ Complete |
+| `store.go` | `Store` interface and `MemoryStore` for tests | ✅ Complete |
 
-### Módulo `/workers/` (202 líneas, solo WASM)
+### `/workers/` Module (WASM only)
 
-| Archivo | Líneas | Rol | Estado |
-|---|---|---|---|
-| `workers.go` | 70 | Registro de handlers, señal `ready` | ✅ Completo |
-| `request.go` | 83 | Conversión Request JS → Request Go | ✅ Completo |
-| `response.go` | 49 | Construcción y serialización de Response | ✅ Completo |
+| File | Role | Status |
+|---|---|---|
+| `workers.go` | Handler registration, `ready` signal | ✅ Complete |
+| `request.go` | JS Request → Go Request conversion | ✅ Complete |
+| `response.go` | Response construction and serialization | ✅ Complete |
 
 ### CLI (`/cmd/goflare/`)
 
-| Archivo | Líneas | Estado |
-|---|---|---|
-| `main.go` | 53 | ✅ Completo |
-
-### Pruebas (`/tests/`, 964 líneas, 27 tests)
-
-| Archivo | Tests | Cobertura |
-|---|---|---|
-| `init_test.go` | 8 | Asistente, generación de `.env`/`.gitignore` |
-| `auth_test.go` | 4 | Validación de tokens, keyring |
-| `build_test.go` | 4 | Manejo de errores (config vacía, paths faltantes) |
-| `build_output_test.go` | 3 | Estructura de salida (`.build/`, sin `dist/`) |
-| `deploy_pages_output_test.go` | 3 | Validación de artefactos de Pages |
-| `deploy_pages_test.go` | 2 | Flujo de API de Pages |
-| `deploy_worker_test.go` | 2 | Subida multipart del Worker |
-| `pages_test.go` | 1 | ⚠️ Test de integración con comentario desactualizado |
-| `setup_test.go` / `helpers_test.go` | — | Helpers `testEnv`, `TempDir`, `MockHTTPServer` |
-
----
-
-## 4. Dependencias
-
-Todas las dependencias directas son modernas y se mantienen activamente:
-
-| Módulo | Versión | Propósito |
-|---|---|---|
-| `github.com/tdewolff/minify/v2` | v2.24.12 | Minificación JS/CSS |
-| `github.com/tinywasm/assetmin` | v0.3.1 | Generación de `script.js` / `style.css` |
-| `github.com/tinywasm/client` | v0.6.5 | Compilación WASM (wrapper de TinyGo) |
-| `github.com/zalando/go-keyring` | v0.2.6 | Integración con keyring del sistema |
-
-**Requisitos:** Go 1.25.2+.
-
-**Veredicto:** ✅ Árbol de dependencias saludable, sin paquetes deprecados ni sin mantenimiento.
-
----
-
-## 5. Seguridad y manejo de secretos
-
-### Flujo de tokens (auth.go + store.go)
-
-1. Buscar en el keyring del sistema (preferido).
-2. Buscar variable de entorno `CLOUDFLARE_API_TOKEN` (fallback CI/CD).
-3. Solicitar interactivamente al usuario (desarrollo local).
-
-### Almacenamiento
-
-- **Desarrollo:** Keyring nativo (Keychain en macOS, libsecret en Linux, WinCred en Windows) vía `zalando/go-keyring`.
-- **Tests:** `MemoryStore` en memoria, exportado para librerías consumidoras.
-
-### Validación
-
-- El token se prueba contra `GET /user/tokens/verify`.
-- Mensajes de error accionables ante fallo.
-- Soporte para reset con `goflare auth --reset`.
-
-### Verificaciones de seguridad
-
-| Aspecto | Estado |
+| File | Status |
 |---|---|
-| Token en `.env` | ✅ Excluido por diseño |
-| Token en historial de git | ✅ `.env` está en `.gitignore` |
-| Token hardcodeado | ✅ Nunca: solo se lee de keyring/env |
-| HTTPS forzado | ✅ `https://api.cloudflare.com` |
-| Filtración en errores | ✅ Los mensajes no exponen tokens |
+| `main.go` | ✅ Complete (auth, build, deploy) |
 
 ---
 
-## 6. Documentación
+## 4. Dependencies
 
-| Documento | Calidad |
+All direct dependencies are modern and actively maintained:
+
+| Module | Purpose |
 |---|---|
-| `README.md` (170 líneas) | ✅ Exhaustivo: propósito, layout, instalación, CLI, ejemplos, configuración |
-| `docs/ARCHITECTURE.md` | ✅ Excelente: diagrama de componentes, responsabilidades, principios |
-| `docs/QUICK_REFERENCE.md` | ✅ Bueno: tabla de configuración y uso del CLI |
-| `docs/BUILD_PAGES.md` | ✅ Breve pero suficiente |
-| `docs/BUILD_WORKERS.md` | ✅ Breve pero suficiente |
-| `docs/SECRETS_PLAN.md` | 📋 Excelente como roadmap, **no implementado todavía** |
+| `github.com/tdewolff/minify/v2` | JS/CSS minification |
+| `github.com/tinywasm/assetmin` | `script.js` / `style.css` generation |
+| `github.com/tinywasm/client` | WASM compilation (TinyGo wrapper) |
+
+**Requirements:** Go 1.25.2+.
 
 ---
 
-## 7. Ajustes pendientes antes y después del release
+## 5. Security and Secret Management
 
-### 🟡 Recomendados antes de v1.0.0 (no son bloqueantes)
+### Token Flow (auth.go)
 
-1. **Corregir comentario en `tests/pages_test.go:13`.**
-   El comentario afirma que `generateWorkerFile` y `generateWasmFile` "no están implementados todavía", pero **sí lo están** (`javascripts.go:30` y `wasm.go:3`). El test espera fallo cuando el código está correcto. Actualizar la lógica o eliminar el comentario obsoleto.
+1. Read `CLOUDFLARE_API_TOKEN` environment variable.
+2. Validate against the Cloudflare API.
+3. Fail with clear instructions if missing or invalid.
 
-2. **Añadir workflow de CI en GitHub Actions.**
-   Actualmente `.github/` solo contiene `FUNDING.yml`. Crear `.github/workflows/test.yml` con `go build`, `go vet` y `go test ./...` para validar PRs automáticamente.
+### Security Checks
 
-3. **Documentar explícitamente la versión mínima de Go** en el README (ya está en `go.mod` como 1.25.2 pero conviene mencionarlo).
-
-### 🟢 Mejoras planificadas (post-v1.0.0, ya documentadas)
-
-Ver `docs/SECRETS_PLAN.md`. Estas funcionalidades están diseñadas pero **no implementadas**, y **no son necesarias** para uso en producción:
-
-1. **Gestión de secretos vía CLI**
-   - `goflare secrets push` — sincronizar token con GitHub Actions
-   - `goflare secrets status` — mostrar dónde está registrado el token
-   - `goflare secrets reset` — limpiar el token local
-
-2. **Generación automática de workflow de despliegue**
-   - Crear `.github/workflows/deploy.yml` durante `goflare init`
-   - Propagación de variables de entorno
-
-3. **Integración con repositorio**
-   - Auto-detección del repo de GitHub vía `git remote`
-   - Generación condicional del workflow
-
-### ⚪ Limitaciones esperadas (no requieren acción)
-
-- **Sin tests unitarios para `workers/request.go` y `workers/response.go`:** son código WASM puro, requieren runtime JS. Es lo esperable.
-- **Sin tests end-to-end contra Cloudflare real:** correcto para una librería; obligaría a credenciales reales en CI.
+| Aspect | Status |
+|---|---|
+| Token in `.env` | ✅ Excluded by design |
+| Token in git history | ✅ `.env` is in `.gitignore` |
+| Hardcoded token | ✅ Never: only read from env |
+| Forced HTTPS | ✅ `https://api.cloudflare.com` |
+| Error leakage | ✅ Messages do not expose tokens |
 
 ---
 
-## 8. Veredicto de producción
+## 6. Documentation
 
-### ✅ Fortalezas
-
-1. **Cero deuda técnica:** sin TODOs, sin panics, sin stubs.
-2. **Cobertura de pruebas comprensiva:** 27 tests cubriendo los flujos principales.
-3. **Seguridad por defecto:** keyring, `.env` excluido de git, HTTPS forzado.
-4. **Dependencias modernas y estables.**
-5. **Compilación limpia** sin warnings ni vet issues.
-6. **Documentación excelente:** README + arquitectura + referencia rápida.
-7. **API clara:** punto de entrada único (`goflare.New(cfg)`) y abstracciones correctas (`Store`).
-8. **Mantenimiento activo:** actualizaciones regulares de dependencias.
-
-### ⚠️ Limitaciones (no bloqueantes)
-
-1. Sin workflows de CI/CD automatizados.
-2. La gestión de secretos por CLI está planificada pero no codificada.
-3. Un test de integración tiene un comentario desactualizado.
-4. El código WASM no es testeable en entorno Go estándar (es lo esperado).
-
-### 🟢 Conclusión
-
-**La librería está lista para producción.** Las limitaciones listadas son:
-- Documentadas (roadmap claro en `SECRETS_PLAN.md`).
-- No críticas para el funcionamiento principal.
-- Mejoras de proceso (CI/CD) más que del código en sí.
-
-Se recomienda taggear como **v1.0.0** tras aplicar los tres ajustes recomendados de la sección 7.
+| Document | Quality |
+|---|---|
+| `README.md` | ✅ Comprehensive: purpose, layout, installation, CLI, examples, configuration |
+| `docs/ARCHITECTURE.md` | ✅ Components, responsibilities, principles |
+| `docs/QUICK_REFERENCE.md` | ✅ Configuration and CLI usage table |
+| `docs/BUILD_PAGES_FUNCTIONS.md` | ✅ Guide for use with Pages Functions |
+| `docs/CI_D1_SECRETS.md` | ✅ Manual configuration guide in GitHub |
+| `docs/CI_GITHUB_ACTIONS.md` | ✅ Deployment workflow example |
 
 ---
 
-## 9. Tabla resumen final
+## 7. Conclusion
 
-| Categoría | Estado | Evidencia |
-|---|---|---|
-| Compilación | ✅ Pasa | `go build`, `go vet` sin warnings |
-| Tests | ✅ Pasa | 27/27 en 44 ms |
-| Completitud del código | ✅ 100% | Sin TODOs, FIXMEs, panics, stubs |
-| Dependencias | ✅ Saludable | 4 directas, todas estables y recientes |
-| Documentación | ✅ Excelente | README + arquitectura + referencias |
-| Seguridad | ✅ Robusta | Keyring, sin secretos en git, HTTPS |
-| Diseño de API | ✅ Limpio | Entrada única, buenas abstracciones |
-| Lógica de despliegue | ✅ Completa | Integración total con API de Cloudflare |
-| Manejo de errores | ✅ Bueno | Errores contextualizados, fallos graciosos |
-| Toolchain WASM | ✅ Integrado | Auto-instalación de TinyGo |
-| Mantenimiento | ✅ Activo | Actualizaciones regulares |
-| **Listo para producción** | 🟢 **SÍ** | Limitaciones documentadas o planificadas |
+**The library is ready for production.** Secret management has been drastically simplified by removing dependency on local keyrings and moving responsibility to the CI/CD platform, aligning with industry best practices.

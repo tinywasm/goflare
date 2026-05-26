@@ -6,16 +6,15 @@ import (
 	"os"
 	"testing"
 
+	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/goflare/d1"
 	"github.com/tinywasm/orm"
-	keyring "github.com/zalando/go-keyring"
 )
 
 const (
 	envKeyToken      = "CLOUDFLARE_API_TOKEN"
 	envKeyAccountID  = "CLOUDFLARE_ACCOUNT_ID"
 	envKeyDatabaseID = "D1_DATABASE_ID"
-	keyringService   = "goflare"
 	testTable        = "_goflare_test"
 )
 
@@ -27,9 +26,9 @@ type testItem struct {
 }
 
 func (m *testItem) ModelName() string { return testTable }
-func (m *testItem) Schema() []orm.Field {
-	return []orm.Field{
-		{Name: "id", PK: true},
+func (m *testItem) Schema() []fmt.Field {
+	return []fmt.Field{
+		{Name: "id", DB: &fmt.FieldDB{PK: true}},
 		{Name: "name"},
 	}
 }
@@ -37,15 +36,11 @@ func (m *testItem) Pointers() []any { return []any{&m.ID, &m.Name} }
 
 func resolveToken(t *testing.T) string {
 	t.Helper()
-	token, err := keyring.Get(keyringService, envKeyToken)
-	if err == nil && token != "" {
-		return token
-	}
-	token = os.Getenv(envKeyToken)
+	token := os.Getenv(envKeyToken)
 	if token != "" {
 		return token
 	}
-	t.Skip("no token: run 'goflare auth' locally or set CLOUDFLARE_API_TOKEN in CI")
+	t.Skip("no token: set CLOUDFLARE_API_TOKEN in CI or environment")
 	return ""
 }
 
@@ -85,8 +80,8 @@ func TestD1Integration(t *testing.T) {
 
 	// Read one
 	got := &testItem{}
-	if err := db.First(got, orm.Where("id", 1)); err != nil {
-		t.Fatalf("First: %v", err)
+	if err := db.Query(got).Where("id").Eq(1).ReadOne(); err != nil {
+		t.Fatalf("ReadOne: %v", err)
 	}
 	if got.Name != "hello" {
 		t.Fatalf("expected name=hello, got %q", got.Name)
@@ -94,27 +89,27 @@ func TestD1Integration(t *testing.T) {
 
 	// Update
 	item.Name = "world"
-	if err := db.Save(item); err != nil {
-		t.Fatalf("Save: %v", err)
+	if err := db.Update(item, orm.Eq("id", 1)); err != nil {
+		t.Fatalf("Update: %v", err)
 	}
 
 	// Verify update
 	got2 := &testItem{}
-	if err := db.First(got2, orm.Where("id", 1)); err != nil {
-		t.Fatalf("First after Save: %v", err)
+	if err := db.Query(got2).Where("id").Eq(1).ReadOne(); err != nil {
+		t.Fatalf("ReadOne after Update: %v", err)
 	}
 	if got2.Name != "world" {
 		t.Fatalf("expected name=world after update, got %q", got2.Name)
 	}
 
 	// Delete
-	if err := db.Delete(item); err != nil {
+	if err := db.Delete(&testItem{}, orm.Eq("id", 1)); err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
 
 	// Verify gone
 	got3 := &testItem{}
-	err = db.First(got3, orm.Where("id", 1))
+	err = db.Query(got3).Where("id").Eq(1).ReadOne()
 	if err != orm.ErrNotFound {
 		t.Fatalf("expected ErrNotFound after delete, got: %v", err)
 	}

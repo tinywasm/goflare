@@ -18,6 +18,9 @@ func TestDeployWorker_UploadScript(t *testing.T) {
 	}
 	defer cleanup()
 
+	os.Setenv("CLOUDFLARE_API_TOKEN", "valid-token")
+	defer os.Unsetenv("CLOUDFLARE_API_TOKEN")
+
 	outputDir := filepath.Join(tmpDir, ".build")
 	os.MkdirAll(outputDir, 0755)
 	os.WriteFile(filepath.Join(outputDir, "edge.js"), []byte("console.log('edge')"), 0644)
@@ -47,9 +50,6 @@ func TestDeployWorker_UploadScript(t *testing.T) {
 	})
 	defer server.Close()
 
-	store := goflare.NewMemoryStore()
-	store.Set("goflare/test-project", "valid-token")
-
 	cfg := &goflare.Config{
 		ProjectName: "test-project",
 		AccountID:   "account-id",
@@ -59,7 +59,7 @@ func TestDeployWorker_UploadScript(t *testing.T) {
 	g := goflare.New(cfg)
 	g.BaseURL = server.URL
 
-	err = g.DeployWorker(store)
+	err = g.DeployWorker()
 	if err != nil {
 		t.Fatalf("DeployWorker failed: %v", err)
 	}
@@ -72,13 +72,13 @@ func TestDeployWorker_MissingArtifact(t *testing.T) {
 	}
 	defer cleanup()
 
+	os.Setenv("CLOUDFLARE_API_TOKEN", "valid-token")
+	defer os.Unsetenv("CLOUDFLARE_API_TOKEN")
+
 	outputDir := filepath.Join(tmpDir, ".build")
 	os.MkdirAll(outputDir, 0755)
 	// Only one file
 	os.WriteFile(filepath.Join(outputDir, "edge.js"), []byte("console.log('edge')"), 0644)
-
-	store := goflare.NewMemoryStore()
-	store.Set("goflare/test-project", "valid-token")
 
 	cfg := &goflare.Config{
 		ProjectName: "test-project",
@@ -88,7 +88,7 @@ func TestDeployWorker_MissingArtifact(t *testing.T) {
 	}
 	g := goflare.New(cfg)
 
-	err = g.DeployWorker(store)
+	err = g.DeployWorker()
 	if err == nil {
 		t.Fatal("Expected error due to missing artifacts")
 	}

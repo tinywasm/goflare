@@ -37,29 +37,14 @@ my-project/
     └── edge.wasm              # compiled edge/main.go
 ```
 
-## Project layout — Workers (legacy)
-
-```
-my-project/
-├── .env
-├── edge/
-│   └── main.go                # imports goflare/workers (workers.Handle)
-└── .build/                    # gitignored worker artifacts
-    ├── edge.js
-    └── edge.wasm
-```
-
 ## .env
 ```bash
 PROJECT_NAME=my-app
 CLOUDFLARE_ACCOUNT_ID=your-account-id
-PUBLIC_DIR=web/public            # optional, default: web/public
-FUNCTIONS_DIR=functions          # optional, default: functions
-# ENTRY=edge                     # optional, auto-detected if edge/main.go exists
 # DOMAIN=example.com             # optional, custom domain for Pages
 ```
 
-**NEVER** put `CLOUDFLARE_API_TOKEN` in `.env`. The token lives in the OS keyring via `goflare auth`.
+**NEVER** put `CLOUDFLARE_API_TOKEN` in `.env`. The token lives in GitHub Secrets or environment variables.
 
 ## CLI
 Install the CLI:
@@ -67,10 +52,21 @@ Install the CLI:
 go install github.com/tinywasm/goflare/cmd/goflare@latest
 ```
 
-- `goflare init [--mode=pages-functions|workers|pages]`: Setup project, scaffold `edge/main.go`, write `.env`.
-- `goflare auth`: Save Cloudflare API token to the OS keyring.
+- `goflare auth --check`: Validate `CLOUDFLARE_API_TOKEN` from environment.
 - `goflare build`: Infer mode from `edge/main.go` imports and produce artifacts.
-- `goflare deploy`: Direct Upload v2. ⚠️ Status not fully verified — primary deploy flow is `git push` via CF Git Integration.
+- `goflare deploy`: Direct Upload v2. ⚠️ Designed for CI/CD environments.
+
+## GitHub Setup
+Deployment is designed to run in CI. Register secrets in:
+GitHub → Settings → Secrets and variables → Actions.
+
+| Name | Type | Description |
+|---|---|---|
+| `CLOUDFLARE_API_TOKEN` | Secret | API Token with Workers and Pages permissions |
+| `CLOUDFLARE_ACCOUNT_ID` | Secret | Your Cloudflare Account ID |
+| `D1_DATABASE_ID` | Variable | D1 database ID (optional) |
+
+For more details see [CI_D1_SECRETS.md](docs/CI_D1_SECRETS.md).
 
 ## Edge function — Pages Functions (recommended)
 `edge/main.go`:
@@ -91,67 +87,6 @@ func main() {
 }
 ```
 
-Handlers live in `modules/<feature>/handler.go` and use the `router.Context` interface:
-```go
-package contact
-
-import (
-    "github.com/tinywasm/goflare/cloudflare"
-    "github.com/tinywasm/goflare/router"
-)
-
-func Handle(ctx router.Context) {
-    ctx.SetHeader("Content-Type", "application/json")
-    ctx.WriteStatus(200)
-    ctx.Write([]byte(`{"ok":true}`))
-    _ = cloudflare.Env("RESEND_API_KEY") // read secret from context.env
-}
-```
-
-`routes/routes.go` wires URLs to handlers (build-agnostic — reused by `edge/main.go` and `web/server.go`):
-```go
-package routes
-
-import (
-    "github.com/tinywasm/goflare/router"
-    "github.com/your-project/modules/contact"
-)
-
-func Register(r router.Router) {
-    r.Post("/api/contacto", contact.Handle)
-}
-```
-
-## Edge function — Workers (legacy)
-`edge/main.go`:
-```go
-//go:build wasm
-
-package main
-
-import "github.com/tinywasm/goflare/workers"
-
-func main() { workers.Handle(handler) }
-
-func handler(w *workers.Response, r *workers.Request) {
-    w.Header()["Content-Type"] = "application/json"
-    w.WriteHeader(200)
-    w.Write([]byte(`{"ok":true}`))
-}
-```
-
-## D1 Database (Cloudflare D1)
-
-Connect to a Cloudflare D1 SQLite database from within a Worker or Pages Function edge handler using `github.com/tinywasm/goflare/d1`. See [docs/D1.md](docs/D1.md) for full documentation.
-
-```go
-db, err := d1.New("DB") // "DB" is the binding name in wrangler.toml
-if err != nil { ... }
-defer db.Close()
-db.CreateTable(&MyModel{})
-db.Create(&MyModel{...})
-```
-
 ## ⚠️ Critical: NO heavy stdlib in wasm code
 Files with `//go:build wasm` (everything under `edge/`, `routes/`, `modules/`, `workers/`, `pages/pages.go`, `cloudflare/env_wasm.go`) **NEVER** import `fmt`, `strings`, `errors`, `encoding/*`, `net/http`, `log`, `io/ioutil`. Use `tinywasm/fmt`, `tinywasm/json`, `tinywasm/strings`, `tinywasm/fetch` instead.
 
@@ -159,57 +94,15 @@ Stdlib inflates the wasm binary ~80% and exceeds Cloudflare Free's 1 MiB limit. 
 
 Verification: `grep -rE '^\s*"(fmt|strings|errors|encoding|net/http|log|io/ioutil)"' edge/ routes/ modules/ workers/ pages/pages.go cloudflare/env_wasm.go` must return empty.
 
-The dev local **can** use stdlib freely in `web/server.go` and `pages/devserver/` — those don't run on the edge.
-
-## Frontend WASM
-Minimal working `web/client.go`:
-```go
-//go:build wasm
-
-package main
-
-import (
-    "github.com/tinywasm/dom"
-    "github.com/tinywasm/form"
-)
-
-type MyForm struct {
-    Name string `input:"required"`
-}
-
-func main() {
-    data := &MyForm{}
-    f, _ := form.New("app", data)
-    dom.Render("app", f)
-    select {}
-}
-```
-*Note: compiled to `web/public/client.wasm`.*
-
-## Shared models (modules/)
-Shared models live in `modules/` and can be imported by both frontend and edge.
-```go
-package contact
-
-// ormc:formonly
-type ContactForm struct {
-    Nombre  string `input:"required,min=2"`
-    Email   string `input:"email,required"`
-    Mensaje string `input:"textarea,required,min=10"`
-}
-```
-
 ## Library usage
 ```go
 cfg := &goflare.Config{
     ProjectName: "myapp",
     AccountID:   "acc-id",
-    PublicDir:   "web/public",
 }
 g := goflare.New(cfg)
 g.Build()
-store := goflare.NewKeyringStore()
-g.Deploy(store)
+g.Deploy()
 ```
 
 ## Config reference
@@ -219,41 +112,11 @@ g.Deploy(store)
 | `ProjectName` | `PROJECT_NAME` | — | required |
 | `AccountID` | `CLOUDFLARE_ACCOUNT_ID` | — | required |
 | `WorkerName` | `WORKER_NAME` | `<ProjectName>-worker` | optional |
-| `Entry` | `ENTRY` | auto: `edge` if `edge/main.go` exists | **directory** name, not a file |
-| `PublicDir` | `PUBLIC_DIR` | `web/public` | static assets root |
-| `FunctionsDir` | `FUNCTIONS_DIR` | `functions` | Pages Functions output dir |
+| `Entry` | — | auto: `edge` | Convention: `edge/main.go` |
+| `PublicDir` | — | auto: `web/public` | Convention: `web/public` |
 | `Domain` | `DOMAIN` | — | optional custom domain |
 | `CompilerMode` | `COMPILER_MODE` | `S` | `S`=small/prod, `M`=debug, `L`=Go std |
-
-> At least one of `Entry` or `PublicDir` must be set. There is **no** `MODE` key — the mode is inferred from `edge/main.go` imports.
-
-## Build output
-After `goflare build`:
-
-| Mode | Output | Committed? |
-|---|---|---|
-| Pages Functions | `functions/[[path]].mjs` + `functions/edge.wasm` | ✅ yes — CF Git Integration deploys them as-is |
-| Workers (legacy) | `.build/edge.js` + `.build/edge.wasm` | ❌ no — `.build/` is gitignored |
-| Static Pages | only `web/public/` (produced by tinywasm framework, NOT by goflare) | ✅ yes |
-
-## Compiler modes
-- `S`: Small (TinyGo production, minified)
-- `M`: Medium (TinyGo debug)
-- `L`: Large (Go standard compiler)
 
 ## Requirements
 - Go 1.25.2+
 - TinyGo — installed automatically by `goflare build` via `tinywasm/tinygo`
-
-`goflare` calls `tinygo.EnsureInstalled()` before each Worker build. If TinyGo is already in `PATH` at the correct version, nothing happens. If it is missing or outdated, it is downloaded and installed to the local cache automatically.
-
-To manage TinyGo independently:
-```go
-import "github.com/tinywasm/tinygo"
-
-tinygo.EnsureInstalled()
-env := tinygo.GetEnv()
-```
-
-## Reference project
-See [goflare-demo](https://github.com/tinywasm/goflare-demo) for a complete example.
