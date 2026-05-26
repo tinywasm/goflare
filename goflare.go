@@ -22,7 +22,7 @@ type Config struct {
 	// Routing
 	Domain string // DOMAIN (optional — custom domain for Pages)
 
-	// Build inputs
+	// Build inputs (conventions, not configurable via .env)
 	Entry     string // ENTRY      (path to main Go file, empty = Pages only)
 	PublicDir string // PUBLIC_DIR (path to static assets, empty = Worker only)
 
@@ -35,7 +35,7 @@ type Config struct {
 	// Compiler
 	CompilerMode string // "S" | "M" | "L"  default: "S"
 
-	D1DatabaseID   string // D1_DATABASE_ID   — set by `goflare d1 init`
+	D1DatabaseID   string // D1_DATABASE_ID
 	D1DatabaseName string // D1_DATABASE_NAME — optional, default: ProjectName
 }
 
@@ -158,17 +158,17 @@ func (g *Goflare) SetCompilerMode(newValue string) {
 	}
 }
 
-func (g *Goflare) Deploy(store Store) error {
+func (g *Goflare) Deploy() error {
 	var buildErrors []error
 
 	if g.Config.Entry != "" {
-		if err := g.DeployWorker(store); err != nil {
+		if err := g.DeployWorker(); err != nil {
 			buildErrors = append(buildErrors, fmt.Errorf("worker deploy failed: %w", err))
 		}
 	}
 
 	if g.Config.PublicDir != "" {
-		if err := g.DeployPages(store); err != nil {
+		if err := g.DeployPages(); err != nil {
 			buildErrors = append(buildErrors, fmt.Errorf("pages deploy failed: %w", err))
 		}
 	}

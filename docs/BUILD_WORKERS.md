@@ -4,7 +4,7 @@ GoFlare enables you to run Go applications on Cloudflare Workers by compiling th
 
 ## Build Process
 
-When `ENTRY` is set in your configuration, `goflare build` will:
+GoFlare will automatically detect the entry point if `edge/main.go` exists (Convention). `goflare build` will:
 
 1. Compile your Go source code to WASM using `tinywasm` (delegating to `tinygo`).
 2. Generate `edge.js`, which bundles the entry point, runtime, and `wasm_exec.js`.
@@ -19,6 +19,10 @@ Deployment is done via a multipart upload to the Cloudflare Workers API.
 - **`edge.js`**: The bundled JavaScript wrapper script.
 - **`edge.wasm`**: The compiled WebAssembly binary.
 
+## CI/CD Deployment
+
+Deployment requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` environment variables. It is designed to run in CI (e.g., GitHub Actions).
+
 ## workers.dev Only
 
-GoFlare currently targets deployment to the `*.workers.dev` subdomain. It does not automatically configure custom routes or zones. After deployment, your worker will be live at `https://<worker-name>.<your-subdomain>.workers.dev`.
+GoFlare currently targets deployment to the `*.workers.dev` subdomain. After deployment, your worker will be live at `https://<worker-name>.<your-subdomain>.workers.dev`.

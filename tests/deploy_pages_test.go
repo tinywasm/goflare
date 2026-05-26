@@ -2,6 +2,7 @@ package goflare_test
 
 import (
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 
@@ -11,6 +12,9 @@ import (
 func TestDeployPages_FullFlow(t *testing.T) {
 	env := newTestEnv(t)
 	defer env.Close()
+
+	os.Setenv("CLOUDFLARE_API_TOKEN", "valid-token")
+	defer os.Unsetenv("CLOUDFLARE_API_TOKEN")
 
 	server := MockHTTPServer(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -44,9 +48,6 @@ func TestDeployPages_FullFlow(t *testing.T) {
 	})
 	defer server.Close()
 
-	store := goflare.NewMemoryStore()
-	store.Set("goflare/test-project", "valid-token")
-
 	cfg := &goflare.Config{
 		ProjectName: "test-project",
 		AccountID:   "account-id",
@@ -56,7 +57,7 @@ func TestDeployPages_FullFlow(t *testing.T) {
 	g := goflare.New(cfg)
 	g.BaseURL = server.URL
 
-	err := g.DeployPages(store)
+	err := g.DeployPages()
 	if err != nil {
 		t.Fatalf("DeployPages failed: %v", err)
 	}
@@ -65,6 +66,9 @@ func TestDeployPages_FullFlow(t *testing.T) {
 func TestDeployPages_CreatesProjectIfMissing(t *testing.T) {
 	env := newTestEnv(t)
 	defer env.Close()
+
+	os.Setenv("CLOUDFLARE_API_TOKEN", "token")
+	defer os.Unsetenv("CLOUDFLARE_API_TOKEN")
 
 	projectCreated := false
 	server := MockHTTPServer(func(w http.ResponseWriter, r *http.Request) {
@@ -101,8 +105,6 @@ func TestDeployPages_CreatesProjectIfMissing(t *testing.T) {
 	})
 	defer server.Close()
 
-	store := goflare.NewMemoryStore()
-	store.Set("goflare/test-project", "token")
 	cfg := &goflare.Config{
 		ProjectName: "test-project",
 		AccountID:   "acc",
@@ -112,7 +114,7 @@ func TestDeployPages_CreatesProjectIfMissing(t *testing.T) {
 	g := goflare.New(cfg)
 	g.BaseURL = server.URL
 
-	if err := g.DeployPages(store); err != nil {
+	if err := g.DeployPages(); err != nil {
 		t.Errorf("DeployPages failed: %v", err)
 	}
 	if !projectCreated {

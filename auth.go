@@ -3,66 +3,33 @@
 package goflare
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
-	"strings"
 )
 
-// Auth implements token validation and keyring storage as a method.
-func (g *Goflare) Auth(store Store, in io.Reader) error {
-	key := "goflare/" + g.Config.ProjectName
+var errNoToken = fmt.Errorf("CLOUDFLARE_API_TOKEN is not defined.\n" +
+	"Deployment is executed in CI. Register the token in:\n" +
+	"  GitHub → Settings → Secrets and variables → Actions → New repository secret\n" +
+	"  Name: CLOUDFLARE_API_TOKEN\n\n" +
+	"To validate a token locally before pasting it:\n" +
+	"  CLOUDFLARE_API_TOKEN=cfat_... goflare auth --check")
 
-	// 1. Keyring
-	token, err := store.Get(key)
-	if err == nil && token != "" {
-		return nil
+func (g *Goflare) token() (string, error) {
+	t := os.Getenv("CLOUDFLARE_API_TOKEN")
+	if t == "" {
+		return "", errNoToken
 	}
-
-	// 2. Env var — CI/CD, no se guarda en keyring (el orquestador gestiona el secreto)
-	if t := os.Getenv("CLOUDFLARE_API_TOKEN"); t != "" {
-		return g.validateToken(t)
-	}
-
-	// 3. Prompt interactivo
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "Cloudflare API Token required.")
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "  1. Go to: https://dash.cloudflare.com/profile/api-tokens")
-	fmt.Fprintln(os.Stderr, "  2. Click \"Create Token\" → template \"Edit Cloudflare Workers\"")
-	fmt.Fprintln(os.Stderr, "     Add permission: Cloudflare Pages — Edit")
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "  Token is saved to your system keyring — only asked once per project.")
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprint(os.Stderr, "Paste token: ")
-
-	scanner := bufio.NewScanner(in)
-	if !scanner.Scan() {
-		return scanner.Err()
-	}
-	token = strings.TrimSpace(scanner.Text())
-
-	if err := g.validateToken(token); err != nil {
-		return err
-	}
-
-	if err := store.Set(key, token); err != nil {
-		return fmt.Errorf("failed to save token: %w", err)
-	}
-
-	return nil
+	return t, nil
 }
 
-// GetToken reads the token from the store without prompting.
-func (g *Goflare) GetToken(store Store) (string, error) {
-	key := "goflare/" + g.Config.ProjectName
-	token, err := store.Get(key)
-	if err != nil || token == "" {
-		return "", fmt.Errorf("not authenticated: call Auth first")
+// Auth implements token validation.
+func (g *Goflare) Auth() error {
+	t, err := g.token()
+	if err != nil {
+		return err
 	}
-	return token, nil
+	return g.validateToken(t)
 }
 
 func (g *Goflare) validateToken(token string) error {
@@ -78,7 +45,7 @@ func (g *Goflare) validateToken(token string) error {
 				"  - Token is not expired\n"+
 				"  - Token has Workers Scripts (Edit) + Pages (Edit) permissions\n"+
 				"  - Token is for the correct Cloudflare account\n\n"+
-				"To reset saved token: goflare auth --reset",
+				"Check instructions in GitHub → Settings → Secrets and variables → Actions",
 			err,
 		)
 	}

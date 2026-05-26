@@ -34,10 +34,7 @@ GoFlare is a Go library and CLI that bridges the gap between Go source code and 
 - **Single Source of Truth:** Library callers use the struct directly; CLI users use the `.env` file.
 
 ### 2. Storage (`store.go`)
-- **Keyring Integration:** Securely stores Cloudflare API tokens in the system keyring.
-- **Service Name:** Uses `goflare` as the service name.
-- **Key Format:** Tokens are stored per project if needed, or globally.
-- **Memory Store:** An exported `MemoryStore` is provided for testing and library consumers.
+- **Memory Store:** An exported `MemoryStore` is provided for testing and library consumers. Local keyring management has been removed in favor of platform-based secrets (CI/CD).
 
 ### 3. Build Pipeline (`build.go`, `mode.go`, `javascripts.go`, `wasm.go`)
 - **Mode Inference (`mode.go`):** `inferMode()` reads `edge/main.go` and inspects imports — `tinywasm/goflare/pages` → Pages Functions; `tinywasm/goflare/workers` → Workers; no entry but PublicDir → static Pages. `.env` does NOT carry a `MODE` variable; the code is the source of truth.
@@ -47,8 +44,7 @@ GoFlare is a Go library and CLI that bridges the gap between Go source code and 
 - **Orchestration:** `Build()` dispatches to `buildWorker` / `buildPagesFunctions` / `buildPages` based on the inferred mode.
 
 ### 4. Authentication (`auth.go`)
-- **Direct Token:** Validates Cloudflare API tokens via `GET /user/tokens/verify`.
-- **Interactive:** Prompts the user for a token if one is not found in the keyring.
+- **Environment-based:** Validates `CLOUDFLARE_API_TOKEN` environment variable via `GET /user/tokens/verify`. No local persistent storage.
 
 ### 5. Deployment (`cloudflare.go`)
 - **Internal HTTP Client:** `cfClient` handles direct interaction with Cloudflare API v4.
@@ -61,8 +57,7 @@ GoFlare is a Go library and CLI that bridges the gap between Go source code and 
 goflare/
 ├── goflare.go          # Core Goflare struct and entry points
 ├── config.go           # Configuration loading and validation
-├── store.go            # Keyring and memory storage abstractions
-├── init.go             # Project initialization (scaffolds edge/main.go per mode)
+├── store.go            # Memory storage abstraction
 ├── mode.go             # Mode inference from edge/main.go imports
 ├── build.go            # Build orchestration (Workers, Pages, Pages Functions)
 ├── auth.go             # Cloudflare authentication logic
@@ -91,11 +86,11 @@ See [BUILD_PAGES_FUNCTIONS.md](BUILD_PAGES_FUNCTIONS.md), [BUILD_WORKERS.md](BUI
 
 ## Design Principles
 
-- **Convention over Configuration:** Default output directories are fixed (`.build/` for Workers, `functions/` for Pages Functions).
+- **Convention over Configuration:** Default output directories are fixed (`.build/` for Workers, `functions/` for Pages Functions). Entry points (`edge/main.go`) and public directories (`web/public/`) are auto-detected.
 - **Code as source of truth (D11):** The build mode is inferred from `edge/main.go` imports, not from `.env`. No risk of desync between configuration and code.
 - **Minimal binary in wasm code (D12):** Files compiled to wasm (under `edge/`, `routes/`, `modules/`, `workers/`, `pages/pages.go`, `cloudflare/env_wasm.go`) NEVER import heavy stdlib (`fmt`, `strings`, `errors`, `encoding/*`, `net/http`, `log`). Only `syscall/js`, `bytes`, and `tinywasm/*` (`tinywasm/fmt`, `tinywasm/json`, `tinywasm/fetch`, etc.). This keeps the binary <1 MiB to fit Cloudflare Free's wasm limit.
 - **Native code is unrestricted:** `web/server.go`, `pages/devserver/`, and any `//go:build !wasm` file can use stdlib freely — they don't run on the edge.
 - **Shared logic via interfaces (D4b):** `router.Router` and `router.Context` are pure interfaces shared between wasm and native; handlers in `modules/*/handler.go` are build-agnostic.
 - **Artifacts in git (D8):** `functions/` outputs and `web/public/*` assets are committed; CF Git Integration deploys what's in the repo. Tradeoff accepted: small binary growth in history, immediate size visibility in `git diff`.
-- **Secrets in keyring (never in `.env`):** `CLOUDFLARE_API_TOKEN` is stored via `goflare auth` in the OS keyring (`store.go`). `.env` only carries non-secret identifiers.
+- **Platform Secrets (never in `.env`):** `CLOUDFLARE_API_TOKEN` is provided via environment variables, ideally managed as GitHub Secrets. Local persistently saved tokens are avoided for security.
 - **Self-Contained:** No external tools like Node.js or Wrangler required.

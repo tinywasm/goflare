@@ -10,59 +10,45 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprint(os.Stderr, goflare.Usage())
+		fmt.Println(goflare.Usage())
 		os.Exit(1)
 	}
 
-	var env string
-	var reset, check bool
+	cmd := os.Args[1]
+	args := os.Args[2:]
 
-	fs := flag.NewFlagSet("goflare", flag.ExitOnError)
-	fs.StringVar(&env, "env", ".env", "path to .env file")
-
-	cmd := ""
-	if len(os.Args) >= 2 {
-		cmd = os.Args[1]
-	}
-
-	var err error
 	switch cmd {
-	case "init":
-		fs.Parse(os.Args[2:])
-		err = goflare.RunInit(env, os.Stdin, os.Stdout)
 	case "auth":
-		fs.BoolVar(&reset, "reset", false, "delete saved token")
-		fs.BoolVar(&check, "check", false, "verify saved token")
-		fs.Parse(os.Args[2:])
-		err = goflare.RunAuth(env, os.Stdin, os.Stdout, reset, check)
-	case "build":
-		fs.Parse(os.Args[2:])
-		err = goflare.RunBuild(env, os.Stdout)
-	case "deploy":
-		fs.Parse(os.Args[2:])
-		err = goflare.RunDeploy(env, os.Stdin, os.Stdout)
-	case "d1":
-		sub := ""
-		if len(os.Args) >= 3 {
-			sub = os.Args[2]
-		}
-		var dbName string
-		fs.StringVar(&dbName, "db-name", "", "D1 database name (default: PROJECT_NAME)")
-		fs.Parse(os.Args[3:])
-		switch sub {
-		case "init":
-			err = goflare.RunD1InitCmd(env, dbName)
-		default:
-			fmt.Fprintf(os.Stderr, "unknown d1 subcommand: %s\n", sub)
+		fs := flag.NewFlagSet("auth", flag.ExitOnError)
+		check := fs.Bool("check", false, "Verify token from environment")
+		env := fs.String("env", ".env", "path to .env file")
+		fs.Parse(args)
+		if err := goflare.RunAuth(*env, os.Stdout, *check); err != nil {
 			os.Exit(1)
 		}
-	default:
-		fmt.Fprint(os.Stderr, goflare.Usage())
-		os.Exit(1)
-	}
 
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	case "build":
+		fs := flag.NewFlagSet("build", flag.ExitOnError)
+		env := fs.String("env", ".env", "path to .env file")
+		fs.Parse(args)
+		if err := goflare.RunBuild(*env, os.Stdout); err != nil {
+			os.Exit(1)
+		}
+
+	case "deploy":
+		fs := flag.NewFlagSet("deploy", flag.ExitOnError)
+		env := fs.String("env", ".env", "path to .env file")
+		fs.Parse(args)
+		if err := goflare.RunDeploy(*env, os.Stdout); err != nil {
+			os.Exit(1)
+		}
+
+	case "help", "-h", "--help":
+		fmt.Println(goflare.Usage())
+
+	default:
+		fmt.Printf("Unknown command: %s\n\n", cmd)
+		fmt.Println(goflare.Usage())
 		os.Exit(1)
 	}
 }

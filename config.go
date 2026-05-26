@@ -15,8 +15,6 @@ const (
 	EnvKeyAccountID      = "CLOUDFLARE_ACCOUNT_ID"
 	EnvKeyWorkerName     = "WORKER_NAME"
 	EnvKeyDomain         = "DOMAIN"
-	EnvKeyEntry          = "ENTRY"
-	EnvKeyPublicDir      = "PUBLIC_DIR"
 	EnvKeyCompilerMode   = "COMPILER_MODE"
 	EnvKeyD1DatabaseID   = "D1_DATABASE_ID"
 	EnvKeyD1DatabaseName = "D1_DATABASE_NAME"
@@ -61,10 +59,6 @@ func LoadConfigFromEnv(path string) (*Config, error) {
 					cfg.WorkerName = value
 				case EnvKeyDomain:
 					cfg.Domain = value
-				case EnvKeyEntry:
-					cfg.Entry = value
-				case EnvKeyPublicDir:
-					cfg.PublicDir = value
 				case EnvKeyCompilerMode:
 					cfg.CompilerMode = value
 				case EnvKeyD1DatabaseID:
@@ -91,12 +85,6 @@ func LoadConfigFromEnv(path string) (*Config, error) {
 	}
 	if cfg.Domain == "" {
 		cfg.Domain = os.Getenv(EnvKeyDomain)
-	}
-	if cfg.Entry == "" {
-		cfg.Entry = os.Getenv(EnvKeyEntry)
-	}
-	if cfg.PublicDir == "" {
-		cfg.PublicDir = os.Getenv(EnvKeyPublicDir)
 	}
 	if cfg.CompilerMode == "" {
 		cfg.CompilerMode = os.Getenv(EnvKeyCompilerMode)
@@ -130,7 +118,7 @@ func (c *Config) applyDefaults() {
 		c.WorkerName = c.ProjectName + "-worker"
 	}
 	if c.OutputDir == "" {
-		c.OutputDir = ".build/" // was: ".goflare/"
+		c.OutputDir = ".build/"
 	}
 	if c.FunctionsDir == "" {
 		c.FunctionsDir = "functions"
@@ -139,10 +127,17 @@ func (c *Config) applyDefaults() {
 		c.CompilerMode = "S"
 	}
 
-	// Auto-detect edge function entry.
+	// Auto-detect edge function entry (convention).
 	if c.Entry == "" {
 		if _, err := os.Stat(filepath.Join("edge", "main.go")); err == nil {
 			c.Entry = "edge"
+		}
+	}
+
+	// Auto-detect public directory (convention).
+	if c.PublicDir == "" {
+		if _, err := os.Stat("web/public"); err == nil {
+			c.PublicDir = "web/public"
 		}
 	}
 }

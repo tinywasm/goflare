@@ -11,7 +11,6 @@ require (
 	github.com/tinywasm/jsvalue v0.0.12
 	github.com/tinywasm/orm v0.8.2
 	github.com/tinywasm/sqlt v0.0.2
-	github.com/zalando/go-keyring v0.2.6
 )
 
 require (
@@ -33,6 +32,7 @@ require (
 	github.com/tinywasm/tinygo v0.0.10 // indirect
 	github.com/tinywasm/unixid v0.2.23 // indirect
 	github.com/tinywasm/wizard v0.0.23 // indirect
+	github.com/zalando/go-keyring v0.2.6 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/term v0.41.0 // indirect
 )

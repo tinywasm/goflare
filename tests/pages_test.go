@@ -33,22 +33,25 @@ func main() {}
 		t.Fatalf("Failed to write main.go: %v", err)
 	}
 
+	// Create public dir
+	publicDir := filepath.Join(tmpDir, "web/public")
+	err = os.MkdirAll(publicDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create public dir: %v", err)
+	}
+
 	// Initialize Goflare with test configuration
 	cfg := &goflare.Config{
 		ProjectName: "test-project",
 		AccountID:   "test-account",
 		Entry:       webDir,
+		PublicDir:   publicDir,
 		OutputDir:   filepath.Join(tmpDir, ".build/"),
 	}
 	g := goflare.New(cfg)
 
-	// Since we haven't implemented generateWorkerFile and generateWasmFile yet in Goflare
-	// but they are called in GeneratePagesFiles (which is in pages.go),
-	// this test will likely fail until those are refactored/implemented.
-	// For Stage 01, we just want to move the file and check if it compiles.
-
 	err = g.GeneratePagesFiles()
 	if err != nil {
-		t.Logf("Expected failure as internal build methods are not yet fully refactored: %v", err)
+		t.Fatalf("GeneratePagesFiles failed: %v", err)
 	}
 }
