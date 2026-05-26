@@ -5,6 +5,7 @@ package goflare
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/tinywasm/assetmin"
@@ -44,7 +45,8 @@ type Goflare struct {
 	assetMin        *assetmin.AssetMin // generates script.js + style.css — nil if no PublicDir
 	Config          *Config            // exported so CLI can read it after LoadConfigFromEnv
 	log             func(message ...any)
-	BaseURL string
+	BaseURL         string
+	stagingDir      string // temporary directory for build artifacts
 }
 
 func syncJSRuntime(mode string) {
@@ -62,6 +64,12 @@ func New(cfg *Config) *Goflare {
 	}
 	cfg.applyDefaults()
 
+	staging, err := os.MkdirTemp("", "goflare-*")
+	if err != nil {
+		// Fallback to configured OutputDir if MkdirTemp fails
+		staging = cfg.OutputDir
+	}
+
 	edgeCompiler := client.New(&client.Config{
 		SourceDir: func() string {
 			if cfg.Entry != "" {
@@ -69,7 +77,7 @@ func New(cfg *Config) *Goflare {
 			}
 			return cfg.PublicDir
 		},
-		OutputDir: func() string { return cfg.OutputDir },
+		OutputDir: func() string { return staging },
 	})
 
 	edgeCompiler.UseDiskStorage()
@@ -90,6 +98,7 @@ func New(cfg *Config) *Goflare {
 		edgeCompiler: edgeCompiler,
 		Config:       cfg,
 		BaseURL:      cfAPIBase,
+		stagingDir:   staging,
 	}
 
 	// If PublicDir is present, create a client to compile web/client.go.
@@ -116,6 +125,10 @@ func New(cfg *Config) *Goflare {
 
 	return g
 }
+
+// StagingDir returns the temporary directory used for intermediate build artifacts.
+// Exposed for testing — verifies that staging is outside the project tree.
+func (g *Goflare) StagingDir() string { return g.stagingDir }
 
 func (g *Goflare) SetLog(f func(message ...any)) {
 	g.log = f
