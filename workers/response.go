@@ -3,22 +3,22 @@
 package workers
 
 import (
-    "bytes"
-    "syscall/js"
+	"bytes"
+	"syscall/js"
 )
 
 // Response is written by the handler and converted to a JS Response.
 type Response struct {
-    status  int
-    headers map[string]string
-    buf     bytes.Buffer
+	status  int
+	headers map[string]string
+	buf     bytes.Buffer
 }
 
 func newResponse() *Response {
-    return &Response{
-        status:  200,
-        headers: map[string]string{},
-    }
+	return &Response{
+		status:  200,
+		headers: map[string]string{},
+	}
 }
 
 // WriteHeader sets the HTTP status code.
@@ -36,14 +36,14 @@ func (w *Response) WriteString(s string) (int, error) { return w.buf.WriteString
 
 // build converts the Go response to a JS Response object.
 func (w *Response) build() js.Value {
-    h := js.Global().Get("Headers").New()
-    for k, v := range w.headers {
-        h.Call("set", k, v)
-    }
+	h := js.Global().Get("Headers").New()
+	for k, v := range w.headers {
+		h.Call("set", k, v)
+	}
 
-    init := js.Global().Get("Object").New()
-    init.Set("status", w.status)
-    init.Set("headers", h)
+	init := js.Global().Get("Object").New()
+	init.Set("status", w.status)
+	init.Set("headers", h)
 
-    return js.Global().Get("Response").New(js.ValueOf(w.buf.String()), init)
+	return js.Global().Get("Response").New(js.ValueOf(w.buf.String()), init)
 }

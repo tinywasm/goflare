@@ -14,7 +14,6 @@ import (
 // found in cfg.PublicDir, not from .build/dist/.
 func TestDeployPages_ReadsFromPublicDir(t *testing.T) {
 	env := newTestEnv(t)
-	defer env.Close()
 
 	os.Setenv("CLOUDFLARE_API_TOKEN", "token")
 	defer os.Unsetenv("CLOUDFLARE_API_TOKEN")
@@ -52,7 +51,6 @@ func TestDeployPages_ReadsFromPublicDir(t *testing.T) {
 // even when .build/dist/ does not exist, as long as PublicDir has files.
 func TestDeployPages_NoDistDirRequired(t *testing.T) {
 	env := newTestEnv(t)
-	defer env.Close()
 
 	os.Setenv("CLOUDFLARE_API_TOKEN", "token")
 	defer os.Unsetenv("CLOUDFLARE_API_TOKEN")
@@ -82,7 +80,6 @@ func TestDeployPages_NoDistDirRequired(t *testing.T) {
 // a "no files found" error when PublicDir exists but is empty.
 func TestDeployPages_FailsWhenPublicDirEmpty(t *testing.T) {
 	env := newTestEnv(t)
-	defer env.Close()
 
 	os.Setenv("CLOUDFLARE_API_TOKEN", "token")
 	defer os.Unsetenv("CLOUDFLARE_API_TOKEN")

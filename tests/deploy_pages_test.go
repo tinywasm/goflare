@@ -11,7 +11,6 @@ import (
 
 func TestDeployPages_FullFlow(t *testing.T) {
 	env := newTestEnv(t)
-	defer env.Close()
 
 	os.Setenv("CLOUDFLARE_API_TOKEN", "valid-token")
 	defer os.Unsetenv("CLOUDFLARE_API_TOKEN")
@@ -65,7 +64,6 @@ func TestDeployPages_FullFlow(t *testing.T) {
 
 func TestDeployPages_CreatesProjectIfMissing(t *testing.T) {
 	env := newTestEnv(t)
-	defer env.Close()
 
 	os.Setenv("CLOUDFLARE_API_TOKEN", "token")
 	defer os.Unsetenv("CLOUDFLARE_API_TOKEN")

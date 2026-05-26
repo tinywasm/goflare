@@ -7,32 +7,29 @@ import (
 )
 
 // testEnv is a pre-wired temporary project layout:
-//   <root>/
-//     web/public/       ← PublicDir
-//       index.html
-//     .build/           ← OutputDir
+//
+//	<root>/
+//	  web/public/       ← PublicDir
+//	    index.html
+//	  .build/           ← OutputDir
 type testEnv struct {
 	Root      string
 	PublicDir string
 	OutputDir string
-	cleanup   func()
 }
 
 func newTestEnv(t *testing.T) *testEnv {
 	t.Helper()
-	dir, cleanup, err := TempDir()
-	if err != nil {
-		t.Fatalf("testEnv: %v", err)
-	}
+	// t.TempDir() creates a temp dir and registers t.Cleanup(os.RemoveAll)
+	// automatically — runs even on test failure or interrupt.
+	dir := t.TempDir()
 	pub := filepath.Join(dir, "web", "public")
 	out := filepath.Join(dir, ".build")
 	os.MkdirAll(pub, 0755)
 	os.MkdirAll(out, 0755)
 	os.WriteFile(filepath.Join(pub, "index.html"), []byte("<h1>test</h1>"), 0644)
-	return &testEnv{Root: dir, PublicDir: pub, OutputDir: out, cleanup: cleanup}
+	return &testEnv{Root: dir, PublicDir: pub, OutputDir: out}
 }
-
-func (e *testEnv) Close() { e.cleanup() }
 
 // writePublic writes a file into PublicDir.
 func (e *testEnv) writePublic(name, content string) {

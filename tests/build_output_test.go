@@ -12,7 +12,6 @@ import (
 // After fix: PublicDir is the final output — no copy step.
 func TestBuild_NoDist(t *testing.T) {
 	env := newTestEnv(t)
-	defer env.Close()
 
 	cfg := &goflare.Config{
 		ProjectName: "test",
@@ -35,7 +34,6 @@ func TestBuild_NoDist(t *testing.T) {
 // never receives Pages files (index.html, style.css, client.wasm).
 func TestBuild_OutputDirContainsOnlyWorkerArtifacts(t *testing.T) {
 	env := newTestEnv(t)
-	defer env.Close()
 
 	env.writePublic("style.css", "body {}")
 
@@ -66,7 +64,6 @@ func TestBuild_OutputDirContainsOnlyWorkerArtifacts(t *testing.T) {
 // overwritten so the external server boots against fresh assets.
 func TestBuild_PublicDirGetsGeneratedIndex(t *testing.T) {
 	env := newTestEnv(t)
-	defer env.Close()
 
 	cfg := &goflare.Config{
 		ProjectName: "test",

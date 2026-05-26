@@ -10,7 +10,6 @@ import (
 
 func TestBuild_PagesOnly(t *testing.T) {
 	env := newTestEnv(t)
-	defer env.Close()
 
 	env.writePublic("assets/style.css", "body {}")
 

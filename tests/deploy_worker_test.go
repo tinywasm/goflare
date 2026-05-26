@@ -12,14 +12,11 @@ import (
 )
 
 func TestDeployWorker_UploadScript(t *testing.T) {
-	tmpDir, cleanup, err := TempDir()
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer cleanup()
+	tmpDir := t.TempDir()
 
 	os.Setenv("CLOUDFLARE_API_TOKEN", "valid-token")
 	defer os.Unsetenv("CLOUDFLARE_API_TOKEN")
+
 
 	outputDir := filepath.Join(tmpDir, ".build")
 	os.MkdirAll(outputDir, 0755)
@@ -59,18 +56,13 @@ func TestDeployWorker_UploadScript(t *testing.T) {
 	g := goflare.New(cfg)
 	g.BaseURL = server.URL
 
-	err = g.DeployWorker()
-	if err != nil {
+	if err := g.DeployWorker(); err != nil {
 		t.Fatalf("DeployWorker failed: %v", err)
 	}
 }
 
 func TestDeployWorker_MissingArtifact(t *testing.T) {
-	tmpDir, cleanup, err := TempDir()
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer cleanup()
+	tmpDir := t.TempDir()
 
 	os.Setenv("CLOUDFLARE_API_TOKEN", "valid-token")
 	defer os.Unsetenv("CLOUDFLARE_API_TOKEN")
@@ -88,7 +80,7 @@ func TestDeployWorker_MissingArtifact(t *testing.T) {
 	}
 	g := goflare.New(cfg)
 
-	err = g.DeployWorker()
+	err := g.DeployWorker()
 	if err == nil {
 		t.Fatal("Expected error due to missing artifacts")
 	}
