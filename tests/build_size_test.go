@@ -2,43 +2,54 @@ package goflare_test
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/tinywasm/goflare"
 )
 
-func TestBuild_NoDotBuildInRepo(t *testing.T) {
-	// If OutputDir is ".build/" (default), New() creates a staging dir.
-	// Build() should use it and then remove it.
-
-	// We use a separate directory to avoid conflicts with existing .build
-	tmpDir, err := os.MkdirTemp("", "goflare-test-*")
+// TestBuild_StagingDirOutsideRepo verifies that New() uses os.MkdirTemp for the
+// edge compiler staging dir — not .build/ inside the project tree.
+func TestBuild_StagingDirOutsideRepo(t *testing.T) {
+	tmpRepo, err := os.MkdirTemp("", "goflare-repo-*")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer os.RemoveAll(tmpRepo)
 
 	oldWd, _ := os.Getwd()
-	os.Chdir(tmpDir)
+	os.Chdir(tmpRepo)
 	defer os.Chdir(oldWd)
-
-	// Create minimal project
-	os.MkdirAll("edge", 0755)
-	os.WriteFile("edge/main.go", []byte(`package main
-import _ "github.com/tinywasm/goflare/workers"
-func main() {}`), 0644)
 
 	cfg := &goflare.Config{
 		ProjectName: "test-staging",
 		AccountID:   "123",
 		Entry:       "edge/main.go",
-		// OutputDir defaults to .build/
+		// OutputDir defaults to .build/ — staging must go to os.MkdirTemp instead
 	}
 
-	_ = goflare.New(cfg)
+	g := goflare.New(cfg)
 
-	// Before build, .build/ should not exist
-	if _, err := os.Stat(".build"); err == nil {
-		t.Error(".build/ should not exist yet")
+	staging := g.StagingDir()
+
+	// Staging must not be inside the repo
+	if strings.HasPrefix(staging, tmpRepo) {
+		t.Errorf("staging dir %q is inside the repo %q — must be in os.MkdirTemp", staging, tmpRepo)
 	}
+
+	// Staging must actually exist (MkdirTemp succeeded)
+	if _, err := os.Stat(staging); os.IsNotExist(err) {
+		t.Errorf("staging dir %q does not exist", staging)
+	}
+
+	// .build/ must NOT have been created in the repo
+	dotBuild := filepath.Join(tmpRepo, ".build")
+	if _, err := os.Stat(dotBuild); err == nil {
+		t.Errorf(".build/ was created inside the repo at %q — must not happen", dotBuild)
+	}
+
+	// Cleanup: staging dir is removed when Goflare is done (defer in Build).
+	// Here we verify New() alone does not leak it by cleaning up manually.
+	os.RemoveAll(staging)
 }

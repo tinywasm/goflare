@@ -126,6 +126,10 @@ func New(cfg *Config) *Goflare {
 	return g
 }
 
+// StagingDir returns the temporary directory used for intermediate build artifacts.
+// Exposed for testing — verifies that staging is outside the project tree.
+func (g *Goflare) StagingDir() string { return g.stagingDir }
+
 func (g *Goflare) SetLog(f func(message ...any)) {
 	g.log = f
 	if g.edgeCompiler != nil {
