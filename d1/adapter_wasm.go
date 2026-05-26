@@ -12,8 +12,8 @@ import (
 
 type adapter struct{ dbObj js.Value }
 
-// New opens the named D1 binding and returns an *orm.DB.
-func New(bindingName string) (*orm.DB, error) {
+// NewEdge opens the named D1 binding (Cloudflare edge runtime) and returns an *orm.DB.
+func NewEdge(bindingName string) (*orm.DB, error) {
 	v := js.Global().Get("context").Get("env").Get(bindingName)
 	if v.IsUndefined() || v.IsNull() {
 		return nil, ErrDatabaseNotFound
