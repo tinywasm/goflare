@@ -50,8 +50,8 @@ github.com/tinywasm/jsvalue v0.0.12 h1:rAP9eNpYHIBG8jAIu/RJdl5HmmjO2vDNG/yAyaTX9
 github.com/tinywasm/jsvalue v0.0.12/go.mod h1:5m9STBdqlJ6Y4UsdUJW+Z8IB8qu6wIRmZ3YfJ8RLf0Y=
 github.com/tinywasm/mcp v0.1.9 h1:x6z4wSU9DAe4E6J2r0Io0MMk+z52hPcP92lXO4EKjCQ=
 github.com/tinywasm/mcp v0.1.9/go.mod h1:MYeXWHkLdqzi6Y5GNKrSMHtDqkZxeiv4QAfmynD+GB4=
-github.com/tinywasm/orm v0.8.2 h1:iUeIYZLAUUGzggbgJsIEcyeOdl8CB5FMf4Aqq7jkDuo=
-github.com/tinywasm/orm v0.8.2/go.mod h1:Ht7EldRrOH0UZovkF/REkdebPIY5FSxhhSPoszuWaEs=
+github.com/tinywasm/orm v0.8.3 h1:NojuaGmyffl+lZOgiF3b0ta9lNfC4sJsXKXhRneQd3E=
+github.com/tinywasm/orm v0.8.3/go.mod h1:Ht7EldRrOH0UZovkF/REkdebPIY5FSxhhSPoszuWaEs=
 github.com/tinywasm/sqlt v0.0.2 h1:RhGkIBdlyXJSfVSkkNbI09TGcVK6vrEomL9Ftii5HXE=
 github.com/tinywasm/sqlt v0.0.2/go.mod h1:vMKqenBUBRCE6olR7li5VJDqCAQEg28PGHJifloep2Q=
 github.com/tinywasm/time v0.5.0 h1:M17DNgKrMYfkCK42V6miL9AcwfN/FHghbKOSTXJrkMo=
