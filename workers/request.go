@@ -3,17 +3,17 @@
 package workers
 
 import (
-    "syscall/js"
+	"syscall/js"
 
-    "github.com/tinywasm/fmt"
+	"github.com/tinywasm/fmt"
 )
 
 // Request represents an incoming HTTP request to the Worker.
 type Request struct {
-    Method  string
-    URL     string
-    Headers map[string]string
-    body    []byte
+	Method  string
+	URL     string
+	Headers map[string]string
+	body    []byte
 }
 
 // Body returns the raw request body bytes.
@@ -22,63 +22,63 @@ func (r *Request) Body() []byte { return r.body }
 // newRequest reads a JS Fetch Request into a Go Request.
 // Blocks until the body promise resolves.
 func newRequest(jsReq js.Value) (*Request, error) {
-    r := &Request{
-        Method:  jsReq.Get("method").String(),
-        URL:     jsReq.Get("url").String(),
-        Headers: map[string]string{},
-    }
+	r := &Request{
+		Method:  jsReq.Get("method").String(),
+		URL:     jsReq.Get("url").String(),
+		Headers: map[string]string{},
+	}
 
-    // Read headers
-    jsHeaders := jsReq.Get("headers")
-    if !jsHeaders.IsNull() && !jsHeaders.IsUndefined() {
-        entries := jsHeaders.Call("entries")
-        for {
-            next := entries.Call("next")
-            if next.Get("done").Bool() {
-                break
-            }
-            val := next.Get("value")
-            r.Headers[val.Index(0).String()] = val.Index(1).String()
-        }
-    }
+	// Read headers
+	jsHeaders := jsReq.Get("headers")
+	if !jsHeaders.IsNull() && !jsHeaders.IsUndefined() {
+		entries := jsHeaders.Call("entries")
+		for {
+			next := entries.Call("next")
+			if next.Get("done").Bool() {
+				break
+			}
+			val := next.Get("value")
+			r.Headers[val.Index(0).String()] = val.Index(1).String()
+		}
+	}
 
-    // Read body — blocks via channel + promise chaining
-    body, err := readBodyText(jsReq)
-    if err != nil {
-        return nil, fmt.Errf("workers: read body: %s", err.Error())
-    }
-    r.body = []byte(body)
+	// Read body — blocks via channel + promise chaining
+	body, err := readBodyText(jsReq)
+	if err != nil {
+		return nil, fmt.Errf("workers: read body: %s", err.Error())
+	}
+	r.body = []byte(body)
 
-    return r, nil
+	return r, nil
 }
 
 // readBodyText resolves req.text() via a blocking channel.
 // js.FuncOf callbacks are released after the promise settles to avoid leaks.
 func readBodyText(jsReq js.Value) (string, error) {
-    ch := make(chan string, 1)
-    errCh := make(chan string, 1)
+	ch := make(chan string, 1)
+	errCh := make(chan string, 1)
 
-    var thenFn, catchFn js.Func
+	var thenFn, catchFn js.Func
 
-    thenFn = js.FuncOf(func(this js.Value, args []js.Value) any {
-        ch <- args[0].String()
-        thenFn.Release()
-        catchFn.Release()
-        return nil
-    })
-    catchFn = js.FuncOf(func(this js.Value, args []js.Value) any {
-        errCh <- args[0].String()
-        thenFn.Release()
-        catchFn.Release()
-        return nil
-    })
+	thenFn = js.FuncOf(func(this js.Value, args []js.Value) any {
+		ch <- args[0].String()
+		thenFn.Release()
+		catchFn.Release()
+		return nil
+	})
+	catchFn = js.FuncOf(func(this js.Value, args []js.Value) any {
+		errCh <- args[0].String()
+		thenFn.Release()
+		catchFn.Release()
+		return nil
+	})
 
-    jsReq.Call("text").Call("then", thenFn).Call("catch", catchFn)
+	jsReq.Call("text").Call("then", thenFn).Call("catch", catchFn)
 
-    select {
-    case text := <-ch:
-        return text, nil
-    case msg := <-errCh:
-        return "", fmt.Errf("%s", msg)
-    }
+	select {
+	case text := <-ch:
+		return text, nil
+	case msg := <-errCh:
+		return "", fmt.Errf("%s", msg)
+	}
 }

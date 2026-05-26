@@ -2,3 +2,4 @@ cmd/goflare/goflare
 .env
 goflare
 goflare-bin
+tests/tmp/
