@@ -69,12 +69,23 @@ func (r *nativeRouter) Handle(method, path string, h router.HandlerFunc) {
 	})
 }
 
+// noCache wraps a handler to disable browser caching. A dev server must never
+// cache: after a rebuild the browser has to fetch the fresh .wasm, not a stale copy.
+func noCache(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+		h.ServeHTTP(w, r)
+	})
+}
+
 func ListenAndServe(addr string, r router.Router, staticDir string) error {
 	nr := r.(*nativeRouter)
 
-	// Serve static files if staticDir is provided
+	// Serve static files if staticDir is provided, with caching disabled (dev).
 	if staticDir != "" {
-		nr.mux.Handle("/", http.FileServer(http.Dir(staticDir)))
+		nr.mux.Handle("/", noCache(http.FileServer(http.Dir(staticDir))))
 	}
 
 	return http.ListenAndServe(addr, nr.mux)
