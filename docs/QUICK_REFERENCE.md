@@ -13,7 +13,6 @@
 | Key | Description |
 |---|---|
 | `PROJECT_NAME` | Identity of the project in Cloudflare. |
-| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare Account ID. |
 | `DOMAIN` | Custom domain for Pages (optional). |
 | `COMPILER_MODE` | `S` (Small), `M` (Medium), `L` (Large). Default: `S`. |
 

@@ -1,7 +1,7 @@
 # GoFlare
 <img src="docs/img/badges.svg">
 
-**GoFlare** is a self-contained Go tool (library + CLI) for deploying Go WASM projects to Cloudflare Workers and Pages. No Node.js, no Wrangler, no GitHub Actions. Pure Go, direct Cloudflare API.
+**GoFlare** is a self-contained Go tool (library + CLI) for deploying Go WASM projects to Cloudflare Workers and Pages. No Node.js, no Wrangler. Pure Go, direct Cloudflare API. Deploy runs in GitHub Actions — secrets never touch the developer's machine.
 
 ## When to use
 - **Cloudflare Pages Functions** in Go (recommended) — static site + Go edge function deployed via CF Git Integration
@@ -40,11 +40,10 @@ my-project/
 ## .env
 ```bash
 PROJECT_NAME=my-app
-CLOUDFLARE_ACCOUNT_ID=your-account-id
 # DOMAIN=example.com             # optional, custom domain for Pages
 ```
 
-**NEVER** put `CLOUDFLARE_API_TOKEN` in `.env`. The token lives in GitHub Secrets or environment variables.
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are **secrets** — they live in GitHub Secrets, never in `.env`.
 
 ## CLI
 Install the CLI:
@@ -110,7 +109,7 @@ g.Deploy()
 | Field | .env key | Default | Notes |
 |-------|----------|---------|-------|
 | `ProjectName` | `PROJECT_NAME` | — | required |
-| `AccountID` | `CLOUDFLARE_ACCOUNT_ID` | — | required |
+| `AccountID` | GitHub Secret `CLOUDFLARE_ACCOUNT_ID` | — | required |
 | `WorkerName` | `WORKER_NAME` | `<ProjectName>-worker` | optional |
 | `Entry` | — | auto: `edge` | Convention: `edge/main.go` |
 | `PublicDir` | — | auto: `web/public` | Convention: `web/public` |
