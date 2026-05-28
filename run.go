@@ -35,7 +35,7 @@ func RunBuild(envPath string, out io.Writer) error {
 		return err
 	}
 
-	if err := cfg.Validate(); err != nil {
+	if err := cfg.ValidateBuild(); err != nil {
 		return err
 	}
 
@@ -59,7 +59,7 @@ func RunDeploy(envPath string, out io.Writer) error {
 		return err
 	}
 
-	if err := cfg.Validate(); err != nil {
+	if err := cfg.ValidateDeploy(); err != nil {
 		return err
 	}
 

@@ -100,12 +100,22 @@ func LoadConfigFromEnv(path string) (*Config, error) {
 	return cfg, nil
 }
 
-func (c *Config) Validate() error {
+// ValidateBuild checks only what goflare build requires.
+// ProjectName and AccountID are deploy-only — never referenced by build.go.
+func (c *Config) ValidateBuild() error {
+	if c.Entry == "" && c.PublicDir == "" {
+		return fmt.Errorf("nothing to build: Entry and PublicDir are both empty")
+	}
+	return nil
+}
+
+// ValidateDeploy checks everything required for a Cloudflare API deploy.
+func (c *Config) ValidateDeploy() error {
 	if c.ProjectName == "" {
-		return fmt.Errorf("ProjectName is required")
+		return fmt.Errorf("ProjectName is required (set PROJECT_NAME env var)")
 	}
 	if c.AccountID == "" {
-		return fmt.Errorf("AccountID is required")
+		return fmt.Errorf("AccountID is required (set CLOUDFLARE_ACCOUNT_ID env var)")
 	}
 	if c.Entry == "" && c.PublicDir == "" {
 		return fmt.Errorf("Entry and PublicDir cannot both be empty")
