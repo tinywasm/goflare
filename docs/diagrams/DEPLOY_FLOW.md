@@ -9,7 +9,7 @@ sequenceDiagram
     G->>ENV: os.Getenv("CLOUDFLARE_API_TOKEN")
     ENV-->>G: Token string
 
-    alt Target: Worker (cfg.Entry set)
+    alt Target: Worker standalone (cfg.Entry set AND no .wasm/.mjs in FunctionsDir)
         G->>CF: PUT /accounts/:id/workers/scripts/:name (Multipart: edge.js + edge.wasm)
         CF-->>G: 200 OK
         G->>CF: GET /accounts/:id/workers/subdomain
@@ -24,8 +24,14 @@ sequenceDiagram
         end
         G->>CF: POST /accounts/:id/pages/projects/:name/uploadToken
         CF-->>G: JWT
-        loop Each Batch (max 50)
+        loop Each Batch (max 50) — PublicDir files
             G->>CF: POST /pages/assets/upload (Auth: JWT)
+        end
+        alt FunctionsDir has .wasm/.mjs (Pages Functions project)
+            loop Each Batch (max 50) — FunctionsDir files → /functions/ prefix
+                G->>CF: POST /pages/assets/upload (Auth: JWT)
+            end
+            Note over G: edge.wasm + [[path]].mjs deployed as Pages Function
         end
         G->>CF: POST /accounts/:id/pages/projects/:name/deployments (Manifest)
         CF-->>G: 200 OK
@@ -34,3 +40,11 @@ sequenceDiagram
 
     G->>User: Deployment Summary
 ```
+
+## Regla: Worker vs Pages Functions
+
+| Condición | Comportamiento |
+|---|---|
+| `cfg.Entry != ""` + NO hay `.wasm`/`.mjs` en `FunctionsDir` | `DeployWorker` (Worker standalone) |
+| `cfg.Entry != ""` + SÍ hay `.wasm`/`.mjs` en `FunctionsDir` | Solo `DeployPages` (edge como Pages Function) |
+| Solo `cfg.PublicDir` | Solo `DeployPages` sin Functions |
