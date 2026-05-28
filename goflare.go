@@ -64,7 +64,7 @@ func New(cfg *Config) *Goflare {
 	}
 	cfg.applyDefaults()
 
-	staging, err := os.MkdirTemp("", "goflare-*")
+	staging, err := os.MkdirTemp(".", "goflare-*")
 	if err != nil {
 		// Fallback to configured OutputDir if MkdirTemp fails
 		staging = cfg.OutputDir
