@@ -39,6 +39,13 @@ func RunBuild(envPath string, out io.Writer) error {
 		return err
 	}
 
+	// Ensure TinyGo is installed and in PATH before creating compilers.
+	// This prevents "exec: tinygo: not found in $PATH" errors when TinyGo
+	// is installed at a non-PATH location (e.g. /usr/local/tinygo/bin in CI).
+	if err := EnsureTinyGo(out); err != nil {
+		return err
+	}
+
 	g := New(cfg)
 	g.SetLog(func(msgs ...any) {
 		fmt.Fprintln(out, msgs...)
