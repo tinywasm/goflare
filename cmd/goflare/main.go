@@ -24,6 +24,7 @@ func main() {
 		env := fs.String("env", ".env", "path to .env file")
 		fs.Parse(args)
 		if err := goflare.RunAuth(*env, os.Stdout, *check); err != nil {
+			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
 
@@ -32,6 +33,7 @@ func main() {
 		env := fs.String("env", ".env", "path to .env file")
 		fs.Parse(args)
 		if err := goflare.RunBuild(*env, os.Stdout); err != nil {
+			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
 
@@ -40,6 +42,7 @@ func main() {
 		env := fs.String("env", ".env", "path to .env file")
 		fs.Parse(args)
 		if err := goflare.RunDeploy(*env, os.Stdout); err != nil {
+			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
 
