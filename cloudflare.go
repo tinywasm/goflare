@@ -119,7 +119,9 @@ func (g *Goflare) DeployPages() error {
 		return fmt.Errorf("failed to parse upload token: %w", err)
 	}
 
-	// 4. Walk PublicDir and collect files
+	// 4. Walk PublicDir and FunctionsDir, collect all files for the manifest.
+	// FunctionsDir (e.g. "functions/") contains the compiled Pages Functions
+	// (edge.wasm + [[path]].mjs) and must be uploaded alongside static assets.
 	distDir := g.Config.PublicDir
 	if _, err := os.Stat(distDir); os.IsNotExist(err) {
 		return fmt.Errorf("public directory missing: %s", distDir)
@@ -128,36 +130,44 @@ func (g *Goflare) DeployPages() error {
 	var files []uploadFile
 	manifest := make(map[string]string)
 
-	err = filepath.Walk(distDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
+	collectDir := func(dir, prefix string) error {
+		return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				return nil
+			}
+			rel, _ := filepath.Rel(dir, path)
+			relPath := prefix + filepath.ToSlash(rel)
+			content, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			hash := sha256.Sum256(content)
+			hashHex := fmt.Sprintf("%x", hash)
+			files = append(files, uploadFile{
+				Key:      hashHex,
+				Value:    base64.StdEncoding.EncodeToString(content),
+				Metadata: map[string]string{"contentType": detectContentType(path)},
+				Base64:   true,
+			})
+			manifest[relPath] = hashHex
 			return nil
-		}
-
-		rel, _ := filepath.Rel(distDir, path)
-		relPath := "/" + filepath.ToSlash(rel)
-
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-
-		hash := sha256.Sum256(content)
-		hashHex := fmt.Sprintf("%x", hash)
-
-		files = append(files, uploadFile{
-			Key:         hashHex,
-			Value:       base64.StdEncoding.EncodeToString(content),
-			Metadata:    map[string]string{"contentType": detectContentType(path)},
-			Base64:      true,
 		})
-		manifest[relPath] = hashHex
-		return nil
-	})
-	if err != nil {
+	}
+
+	if err := collectDir(distDir, "/"); err != nil {
 		return err
+	}
+
+	// Include Pages Functions artifacts if present.
+	if g.Config.FunctionsDir != "" {
+		if _, statErr := os.Stat(g.Config.FunctionsDir); statErr == nil {
+			if err := collectDir(g.Config.FunctionsDir, "/functions/"); err != nil {
+				return err
+			}
+		}
 	}
 
 	if len(files) == 0 {
