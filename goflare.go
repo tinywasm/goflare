@@ -64,7 +64,7 @@ func New(cfg *Config) *Goflare {
 	}
 	cfg.applyDefaults()
 
-	staging, err := os.MkdirTemp(".", "goflare-*")
+	staging, err := os.MkdirTemp("", "goflare-*")
 	if err != nil {
 		// Fallback to configured OutputDir if MkdirTemp fails
 		staging = cfg.OutputDir
@@ -79,6 +79,11 @@ func New(cfg *Config) *Goflare {
 		},
 		OutputDir: func() string { return staging },
 	})
+
+	// client.New defaults AppRootDir to ".", which causes filepath.Join(".", "/tmp/...")
+	// to produce a relative path ("tmp/...") instead of the absolute staging path.
+	// Clearing AppRootDir makes filepath.Join("", "/tmp/...") = "/tmp/..." (correct).
+	edgeCompiler.SetAppRootDir("")
 
 	edgeCompiler.UseDiskStorage()
 	// goflare ALWAYS compiles the edge with TinyGo in production mode.
@@ -111,6 +116,7 @@ func New(cfg *Config) *Goflare {
 			SourceDir: func() string { return frontSourceDir },
 			OutputDir: func() string { return cfg.PublicDir },
 		})
+		browserCompiler.SetAppRootDir("")
 		browserCompiler.UseDiskStorage()
 		browserCompiler.SetMode(cfg.CompilerMode)
 		g.browserCompiler = browserCompiler

@@ -5,8 +5,8 @@ go 1.25.2
 require (
 	github.com/tdewolff/minify/v2 v2.24.12
 	github.com/tinywasm/assetmin v0.3.5
-	github.com/tinywasm/client v0.6.10
-	github.com/tinywasm/fmt v0.23.9
+	github.com/tinywasm/client v0.6.11
+	github.com/tinywasm/fmt v0.23.10
 	github.com/tinywasm/js v0.0.3
 	github.com/tinywasm/jsvalue v0.0.12
 	github.com/tinywasm/orm v0.8.3

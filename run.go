@@ -45,6 +45,7 @@ func RunBuild(envPath string, out io.Writer) error {
 	})
 
 	if err := g.Build(); err != nil {
+		fmt.Fprintln(out, "Error:", err)
 		return err
 	}
 
