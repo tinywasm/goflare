@@ -7,7 +7,7 @@ require (
 	github.com/tinywasm/assetmin v0.3.5
 	github.com/tinywasm/client v0.6.13
 	github.com/tinywasm/fmt v0.23.10
-	github.com/tinywasm/js v0.0.3
+	github.com/tinywasm/js v0.0.4
 	github.com/tinywasm/jsvalue v0.0.12
 	github.com/tinywasm/orm v0.8.3
 	github.com/tinywasm/sqlite v0.2.1
@@ -33,7 +33,7 @@ require (
 	github.com/tinywasm/form v0.2.6 // indirect
 	github.com/tinywasm/gobuild v0.0.25 // indirect
 	github.com/tinywasm/gorun v0.0.23 // indirect
-	github.com/tinywasm/html v0.0.2 // indirect
+	github.com/tinywasm/html v0.0.3 // indirect
 	github.com/tinywasm/json v0.5.2 // indirect
 	github.com/tinywasm/mcp v0.1.9 // indirect
 	github.com/tinywasm/time v0.5.0 // indirect
