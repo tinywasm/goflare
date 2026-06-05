@@ -24,7 +24,7 @@ jobs:
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=$(cat .release-version)" >> "$GITHUB_OUTPUT"
+            echo "tag=$(cat .release-version | tr -d '[:space:]]')" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create and push tag (file-triggered)
@@ -46,8 +46,10 @@ jobs:
       - name: Install gorelease
         run: go install github.com/tinywasm/devflow/cmd/gorelease@latest
 
-      - name: Authenticate gh CLI
-        run: echo "${GH_TOKEN}" | gh auth login --with-token
+      - name: Configure gh credentials
+        run: |
+          mkdir -p ~/.config/gh
+          printf 'github.com:\n  oauth_token: %s\n  git_protocol: https\n  user: github-actions[bot]\n' "${GH_TOKEN}" > ~/.config/gh/hosts.yml
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
