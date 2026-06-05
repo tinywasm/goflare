@@ -32,8 +32,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag ${{ steps.version.outputs.tag }}
-          git push origin ${{ steps.version.outputs.tag }}
+          if git rev-parse "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "Tag ${{ steps.version.outputs.tag }} already exists, skipping creation."
+          else
+            git tag ${{ steps.version.outputs.tag }}
+            git push origin ${{ steps.version.outputs.tag }}
+          fi
 
       - uses: actions/setup-go@v5
         with:
