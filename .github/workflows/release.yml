@@ -42,6 +42,11 @@ jobs:
       - name: Install gorelease
         run: go install github.com/tinywasm/devflow/cmd/gorelease@latest
 
+      - name: Authenticate gh CLI
+        run: echo "${GH_TOKEN}" | gh auth login --with-token
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create Release
         run: gorelease ${{ steps.version.outputs.tag }}
         env:
