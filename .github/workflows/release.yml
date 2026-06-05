@@ -24,7 +24,7 @@ jobs:
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=$(cat .release-version | tr -d '[:space:]]')" >> "$GITHUB_OUTPUT"
+            echo "tag=$(cat .release-version | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create and push tag (file-triggered)
@@ -54,6 +54,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Release
-        run: gorelease ${{ steps.version.outputs.tag }}
+        run: |
+          dbus-run-session -- bash -c '
+            echo "" | /usr/bin/gnome-keyring-daemon --daemonize --unlock --components=secrets
+            gorelease ${{ steps.version.outputs.tag }}
+          '
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
