@@ -3,6 +3,11 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v0.3.0)'
+        required: true
 
 jobs:
   release:
@@ -14,6 +19,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Create and push tag (dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ github.event.inputs.version }}
+          git push origin ${{ github.event.inputs.version }}
+
       - uses: actions/setup-go@v5
         with:
           go-version: 'stable'
@@ -22,6 +35,8 @@ jobs:
         run: go install github.com/tinywasm/devflow/cmd/gorelease@latest
 
       - name: Create Release
-        run: gorelease ${{ github.ref_name }}
+        run: |
+          TAG=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref_name }}
+          gorelease "$TAG"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
