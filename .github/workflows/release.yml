@@ -3,11 +3,10 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version tag (e.g. v0.3.0)'
-        required: true
+    branches:
+      - main
+    paths:
+      - '.release-version'
 
 jobs:
   release:
@@ -19,13 +18,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create and push tag (dispatch only)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Resolve version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=$(cat .release-version)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create and push tag (file-triggered)
+        if: github.ref_type != 'tag'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag ${{ github.event.inputs.version }}
-          git push origin ${{ github.event.inputs.version }}
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin ${{ steps.version.outputs.tag }}
 
       - uses: actions/setup-go@v5
         with:
@@ -35,8 +43,6 @@ jobs:
         run: go install github.com/tinywasm/devflow/cmd/gorelease@latest
 
       - name: Create Release
-        run: |
-          TAG=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref_name }}
-          gorelease "$TAG"
+        run: gorelease ${{ steps.version.outputs.tag }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
