@@ -103,6 +103,16 @@ func RunDeploy(envPath string, out io.Writer) error {
 		return err
 	}
 
+	token, err := g.token()
+	if err != nil {
+		return err
+	}
+	client := &CfClient{
+		Token:      token,
+		BaseURL:    g.BaseURL,
+		HttpClient: http.DefaultClient,
+	}
+
 	var results []DeployResult
 
 	// Deploy as standalone Worker only when Entry is set AND no Pages Functions
@@ -114,14 +124,7 @@ func RunDeploy(envPath string, out io.Writer) error {
 
 		subdomain := "<your-subdomain>"
 		if err == nil {
-			if token, tokenErr := g.token(); tokenErr == nil {
-				client := &cfClient{
-					token:      token,
-					baseURL:    g.BaseURL,
-					httpClient: http.DefaultClient,
-				}
-				subdomain = g.getWorkerSubdomain(client)
-			}
+			subdomain = g.getWorkerSubdomain(client)
 		}
 
 		results = append(results, DeployResult{
@@ -132,6 +135,10 @@ func RunDeploy(envPath string, out io.Writer) error {
 	}
 
 	if cfg.PublicDir != "" {
+		if err := g.ValidateDeployScopes(client); err != nil {
+			return err
+		}
+
 		err := g.DeployPages()
 		url := fmt.Sprintf("https://%s.pages.dev", cfg.ProjectName)
 		if cfg.Domain != "" {

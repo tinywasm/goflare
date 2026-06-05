@@ -33,10 +33,10 @@ func (g *Goflare) Auth() error {
 }
 
 func (g *Goflare) validateToken(token string) error {
-	client := &cfClient{
-		token:      token,
-		httpClient: http.DefaultClient,
-		baseURL:    g.BaseURL,
+	client := &CfClient{
+		Token:      token,
+		HttpClient: http.DefaultClient,
+		BaseURL:    g.BaseURL,
 	}
 
 	if _, err := client.get("/user/tokens/verify"); err != nil {

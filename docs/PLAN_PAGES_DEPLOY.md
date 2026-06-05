@@ -1,4 +1,4 @@
-# PLAN — `cloudflare.go` / `DeployPages`: auto-provisión robusta del proyecto Pages
+# [COMPLETED] PLAN — `cloudflare.go` / `DeployPages`: auto-provisión robusta del proyecto Pages
 
 > **Repo destino:** `tinywasm/goflare` (NO el demo). Este doc es un plan para copiar
 > manualmente al repo de goflare, revisarlo y ejecutarlo allí.
