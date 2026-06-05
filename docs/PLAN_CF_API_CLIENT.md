@@ -1,4 +1,4 @@
-# PLAN — `cfClient` / `parseCFResponse`: transparencia de errores y preflight de permisos
+# [COMPLETED] PLAN — `cfClient` / `parseCFResponse`: transparencia de errores y preflight de permisos
 
 > **Repo destino:** `tinywasm/goflare` (NO el demo). Plan para copiar manualmente a
 > goflare, revisar y ejecutar allí.

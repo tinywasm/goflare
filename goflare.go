@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/tinywasm/assetmin"
 	"github.com/tinywasm/client"
@@ -46,7 +47,8 @@ type Goflare struct {
 	Config          *Config            // exported so CLI can read it after LoadConfigFromEnv
 	log             func(message ...any)
 	BaseURL         string
-	stagingDir      string // temporary directory for build artifacts
+	stagingDir      string        // temporary directory for build artifacts
+	RetryBackoff    time.Duration // base duration for retries (defaults to 1s)
 }
 
 func syncJSRuntime(mode string) {
@@ -104,6 +106,7 @@ func New(cfg *Config) *Goflare {
 		Config:       cfg,
 		BaseURL:      cfAPIBase,
 		stagingDir:   staging,
+		RetryBackoff: time.Second,
 	}
 
 	// If PublicDir is present, create a client to compile web/client.go.

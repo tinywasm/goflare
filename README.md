@@ -53,7 +53,7 @@ go install github.com/tinywasm/goflare/cmd/goflare@latest
 
 - `goflare auth --check`: Validate `CLOUDFLARE_API_TOKEN` from environment.
 - `goflare build`: Infer mode from `edge/main.go` imports and produce artifacts.
-- `goflare deploy`: Direct Upload v2. ⚠️ Designed for CI/CD environments.
+- `goflare deploy`: Direct Upload v2. ⚠️ Designed for CI/CD environments. Now includes automatic Pages project provisioning and robust error reporting.
 
 ## GitHub Setup
 Deployment is designed to run in CI. Register secrets in:
