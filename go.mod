@@ -6,7 +6,7 @@ require (
 	github.com/tdewolff/minify/v2 v2.24.12
 	github.com/tinywasm/assetmin v0.4.1
 	github.com/tinywasm/client v0.6.13
-	github.com/tinywasm/fmt v0.23.10
+	github.com/tinywasm/fmt v0.24.0
 	github.com/tinywasm/js v0.0.4
 	github.com/tinywasm/jsvalue v0.0.12
 	github.com/tinywasm/orm v0.9.0
