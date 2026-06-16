@@ -9,7 +9,7 @@ require (
 	github.com/tinywasm/fmt v0.24.0
 	github.com/tinywasm/js v0.0.4
 	github.com/tinywasm/jsvalue v0.0.12
-	github.com/tinywasm/orm v0.9.4
+	github.com/tinywasm/orm v0.9.5
 	github.com/tinywasm/sqlite v0.2.3
 	github.com/tinywasm/sqlt v0.0.3
 	github.com/tinywasm/tinygo v0.0.11
