@@ -66,8 +66,8 @@ github.com/tinywasm/jsvalue v0.0.12 h1:rAP9eNpYHIBG8jAIu/RJdl5HmmjO2vDNG/yAyaTX9
 github.com/tinywasm/jsvalue v0.0.12/go.mod h1:5m9STBdqlJ6Y4UsdUJW+Z8IB8qu6wIRmZ3YfJ8RLf0Y=
 github.com/tinywasm/mcp v0.1.9 h1:x6z4wSU9DAe4E6J2r0Io0MMk+z52hPcP92lXO4EKjCQ=
 github.com/tinywasm/mcp v0.1.9/go.mod h1:MYeXWHkLdqzi6Y5GNKrSMHtDqkZxeiv4QAfmynD+GB4=
-github.com/tinywasm/orm v0.9.3 h1:LqXdQuEOyGPmfnNRhOnk/XGhgxaRtTCFC0w29Tm5X9o=
-github.com/tinywasm/orm v0.9.3/go.mod h1:MsjAmEbRaM7eqsZDBJa0v8eCsvV+TFsRQwVjGQn2hvs=
+github.com/tinywasm/orm v0.9.4 h1:iIXbERevinQYg0f8gUX+Jn4z04y7xu6kgoVs0QmNFyg=
+github.com/tinywasm/orm v0.9.4/go.mod h1:MsjAmEbRaM7eqsZDBJa0v8eCsvV+TFsRQwVjGQn2hvs=
 github.com/tinywasm/sqlite v0.2.3 h1:7rJy5tvUQFQMDST7SKK2b9FGF7V557G4TzJAfdPKOxg=
 github.com/tinywasm/sqlite v0.2.3/go.mod h1:W2bmgIHQ+08UvGtlpK4LrxEYbrHD6EElSv8/SW91YtY=
 github.com/tinywasm/sqlt v0.0.3 h1:RJgW6ftfuVZFEtheIlPlwVQcEj05v+LJeMQEQYDkbMY=
