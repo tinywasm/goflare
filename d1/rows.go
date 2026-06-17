@@ -7,9 +7,9 @@ import (
 
 	. "github.com/tinywasm/fmt"
 	"github.com/tinywasm/jsvalue"
+	"github.com/tinywasm/orm"
 )
 
-// d1Rows implements orm.Rows over a raw JS array of row arrays.
 type d1Rows struct {
 	arr  js.Value
 	cols []string
@@ -28,6 +28,8 @@ func (r *d1Rows) rowsLen() int {
 	return r.len
 }
 
+func (r *d1Rows) Columns() ([]string, error) { return r.cols, nil }
+
 func (r *d1Rows) Next() bool {
 	if r.cur < r.rowsLen() {
 		r.cur++
@@ -45,8 +47,7 @@ func (r *d1Rows) Scan(dest ...any) error {
 		return Err(errPrefix + "scan destination count mismatch")
 	}
 	for i, ptr := range dest {
-		v := row.Index(i)
-		if err := jsvalue.ScanValue(v, ptr); err != nil {
+		if err := jsvalue.ScanValue(row.Index(i), ptr); err != nil {
 			return err
 		}
 	}
@@ -56,26 +57,26 @@ func (r *d1Rows) Scan(dest ...any) error {
 func (r *d1Rows) Close() error { return nil }
 func (r *d1Rows) Err() error   { return nil }
 
-// errScanner is a Scanner that always returns an error.
 type errScanner struct{ err error }
 
 func (e *errScanner) Scan(...any) error { return e.err }
 
-// rowScanner scans a single D1 row (JS array).
 type rowScanner struct{ row js.Value }
 
 func (s *rowScanner) Scan(dest ...any) error {
 	if s.row.IsUndefined() || s.row.IsNull() {
 		return Err(errPrefix + "no results to scan")
 	}
-	if destLen := len(dest); destLen > s.row.Length() {
+	if len(dest) > s.row.Length() {
 		return Err(errPrefix + "scan destination count mismatch")
 	}
 	for i, ptr := range dest {
-		v := s.row.Index(i)
-		if err := jsvalue.ScanValue(v, ptr); err != nil {
+		if err := jsvalue.ScanValue(s.row.Index(i), ptr); err != nil {
 			return err
 		}
 	}
 	return nil
 }
+
+// compile-time check
+var _ orm.Rows = (*d1Rows)(nil)
