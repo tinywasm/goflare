@@ -41,7 +41,15 @@ func (c *CfClient) put(path string, body []byte) ([]byte, error) {
 }
 
 func (c *CfClient) putMultipart(path string, body io.Reader, contentType string) ([]byte, error) {
-	req, err := http.NewRequest(http.MethodPut, c.BaseURL+path, body)
+	return c.doMultipart(http.MethodPut, path, body, contentType)
+}
+
+func (c *CfClient) postMultipart(path string, body io.Reader, contentType string) ([]byte, error) {
+	return c.doMultipart(http.MethodPost, path, body, contentType)
+}
+
+func (c *CfClient) doMultipart(method, path string, body io.Reader, contentType string) ([]byte, error) {
+	req, err := http.NewRequest(method, c.BaseURL+path, body)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +62,7 @@ func (c *CfClient) putMultipart(path string, body io.Reader, contentType string)
 	}
 	defer resp.Body.Close()
 
-	return parseCFResponse(http.MethodPut, path, resp)
+	return parseCFResponse(method, path, resp)
 }
 
 func (c *CfClient) do(method, path string, body io.Reader) ([]byte, error) {
@@ -231,14 +239,16 @@ func (g *Goflare) DeployPages() error {
 		}
 	}
 
-	// 6. Create deployment
+	// 6. Create deployment — Cloudflare expects multipart/form-data with a
+	// "manifest" field (JSON map of path->hash), not a JSON body (else HTTP 400 code 8000096).
 	deployPath := fmt.Sprintf("/accounts/%s/pages/projects/%s/deployments", g.Config.AccountID, g.Config.ProjectName)
-	deployBody := map[string]any{
-		"files":  manifest,
-		"branch": "main",
-	}
-	deployBodyJSON, _ := json.Marshal(deployBody)
-	_, err = client.post(deployPath, deployBodyJSON)
+	manifestJSON, _ := json.Marshal(manifest)
+	var deployForm bytes.Buffer
+	mw := multipart.NewWriter(&deployForm)
+	mw.WriteField("manifest", string(manifestJSON))
+	mw.WriteField("branch", "main")
+	mw.Close()
+	_, err = client.postMultipart(deployPath, &deployForm, mw.FormDataContentType())
 	if err != nil {
 		return fmt.Errorf("failed to create deployment: %w", err)
 	}
