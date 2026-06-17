@@ -134,11 +134,11 @@ func (g *Goflare) DeployPages() error {
 	}
 
 	// 3. Get upload JWT — retry because a newly created project takes time to be ready.
-	tokenPath := fmt.Sprintf("/accounts/%s/pages/projects/%s/uploadToken", g.Config.AccountID, g.Config.ProjectName)
+	tokenPath := fmt.Sprintf("/accounts/%s/pages/projects/%s/upload-token", g.Config.AccountID, g.Config.ProjectName)
 	var tokenResp []byte
 	err = g.retry(5, g.RetryBackoff, func() error {
 		var e error
-		tokenResp, e = client.post(tokenPath, nil)
+		tokenResp, e = client.get(tokenPath)
 		return e
 	})
 	if err != nil {

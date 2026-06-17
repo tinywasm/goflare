@@ -20,16 +20,16 @@ func TestDeployPages_FullFlow(t *testing.T) {
 	server := MockHTTPServer(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		// GET project
-		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/pages/projects/test-project") {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"success":true,"result":{"name":"test-project"}}`))
-			return
-		}
-		// POST uploadToken
-		if r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/uploadToken") {
+		// GET upload-token
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/upload-token") {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"success":true,"result":{"jwt":"fake-jwt"}}`))
+			return
+		}
+		// GET project
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/pages/projects/test-project") {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"success":true,"result":{"name":"test-project"}}`))
 			return
 		}
 		// POST assets/upload
@@ -73,7 +73,7 @@ func TestDeployPages_CreatesProjectIfMissing(t *testing.T) {
 	projectCreated := false
 	server := MockHTTPServer(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/pages/projects/test-project") {
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/pages/projects/test-project") {
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(`{"success":false,"errors":[{"code":8000007,"message":"Not found"}]}`))
 			return
@@ -85,7 +85,7 @@ func TestDeployPages_CreatesProjectIfMissing(t *testing.T) {
 			return
 		}
 		// Minimal response for the rest of the flow
-		if r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/uploadToken") {
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/upload-token") {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"success":true,"result":{"jwt":"fake"}}`))
 			return
@@ -132,12 +132,12 @@ func TestDeployPages_RetryUploadToken(t *testing.T) {
 	uploadTokenCalls := 0
 	server := MockHTTPServer(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/pages/projects/test-project") {
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/pages/projects/test-project") {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"success":true,"result":{"name":"test-project"}}`))
 			return
 		}
-		if r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/uploadToken") {
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/upload-token") {
 			uploadTokenCalls++
 			if uploadTokenCalls == 1 {
 				w.WriteHeader(http.StatusOK)
