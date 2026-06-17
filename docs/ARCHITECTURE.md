@@ -84,6 +84,8 @@ goflare/
 
 See [BUILD_PAGES_FUNCTIONS.md](BUILD_PAGES_FUNCTIONS.md), [BUILD_WORKERS.md](BUILD_WORKERS.md), [BUILD_PAGES.md](BUILD_PAGES.md).
 
+> ⚠️ **Known gap:** `pages-functions` output (`functions/[[path]].mjs`) only runs when deployed via **CF Git Integration**. Via `goflare deploy` (Direct Upload) the Function is uploaded as a static file and `POST /api/*` returns 405. Fix design (build `_worker.bundle` + `_routes.json`): [PLAN_FUNCTIONS_DIRECT_UPLOAD.md](PLAN_FUNCTIONS_DIRECT_UPLOAD.md).
+
 ## Design Principles
 
 - **Convention over Configuration:** Default output directories are fixed (`.build/` for Workers, `functions/` for Pages Functions). Entry points (`edge/main.go`) and public directories (`web/public/`) are auto-detected.

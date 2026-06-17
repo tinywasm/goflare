@@ -1,7 +1,10 @@
 import "./wasm_exec.js";
 import { createRuntimeContext, loadModule } from "./runtime.mjs";
 
-let mod;
+// Cache of the compiled WebAssembly.Module. Named distinctly from the
+// `mod` import injected at bundle scope (import mod from "./edge.wasm"),
+// otherwise the single-module bundle redeclares `mod` (esbuild error).
+let cachedModule;
 
 globalThis.tryCatch = (fn) => {
   try {
@@ -16,8 +19,8 @@ globalThis.tryCatch = (fn) => {
 };
 
 async function run(ctx) {
-  if (mod === undefined) {
-    mod = await loadModule();
+  if (cachedModule === undefined) {
+    cachedModule = await loadModule();
   }
   const go = new Go();
 
@@ -25,7 +28,7 @@ async function run(ctx) {
   const readyPromise = new Promise((resolve) => {
     ready = resolve;
   });
-  const instance = new WebAssembly.Instance(mod, {
+  const instance = new WebAssembly.Instance(cachedModule, {
     ...go.importObject,
     workers: {
       ready: () => {
