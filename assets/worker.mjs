@@ -28,14 +28,16 @@ async function run(ctx) {
   const readyPromise = new Promise((resolve) => {
     ready = resolve;
   });
-  const instance = new WebAssembly.Instance(cachedModule, {
-    ...go.importObject,
-    workers: {
-      ready: () => {
-        ready();
-      },
+  // Go signals init completion via js.Global().Get("workers").ready() (see
+  // workers.Ready). The handshake MUST live on globalThis: the Go binary uses
+  // syscall/js, not //go:wasmimport, so a `workers` entry in the wasm importObject
+  // is dead — readyPromise would never resolve and every request would hang.
+  globalThis.workers = {
+    ready: () => {
+      ready();
     },
-  });
+  };
+  const instance = new WebAssembly.Instance(cachedModule, go.importObject);
   go.run(instance, ctx);
   await readyPromise;
 }

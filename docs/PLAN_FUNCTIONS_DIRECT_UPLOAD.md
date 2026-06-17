@@ -1,9 +1,26 @@
-# [PENDIENTE] PLAN — Desplegar Pages Functions vía Direct Upload (`_worker.bundle`)
+# [DESCARTADO] PLAN — Desplegar Pages Functions vía Direct Upload (`_worker.bundle`)
 
-> **Repo destino:** `tinywasm/goflare` (NO el demo).
-> **Síntoma original:** tras arreglar el flujo de deploy (ver §1), el sitio estático
-> queda vivo en `*.pages.dev` pero **`POST /api/contacto` devuelve HTTP 405**: la
-> Pages Function no se ejecuta — se subió como archivo estático.
+> **❌ NO IMPLEMENTAR ESTE PLAN.** Se adoptó la **Opción C**: goflare construye y
+> **wrangler despliega** (wrangler ya es dueño del protocolo Direct Upload, incluido el
+> `_worker.bundle` y `_routes.json`). Reimplementarlo en Go sería reinventar wrangler.
+> El workflow del demo (`goflare-demo/.github/workflows/deploy.yml`, generado desde
+> `workflow/spec.go`) ahora hace `goflare build` + `npx wrangler@4 pages deploy`.
+> Este doc se conserva solo como referencia del formato del bundle.
+>
+> **Lo que SÍ salió de aquí y se aplicó a goflare:**
+> - v0.3.2–v0.3.4: fixes del cliente Direct Upload (405 upload-token, hash blake3, manifest multipart).
+> - v0.3.5: fix del bundle JS — `worker.mjs` redeclaraba `mod` (colisión con el import
+>   inyectado); esbuild de wrangler lo detectó. Renombrado a `cachedModule`. Este bug
+>   era latente: la función nunca se había ejecutado (se subía como estático).
+>
+> **Estado tras Opción C (validado en CI):** deploy ✓, estático+routing ✓, la función
+> SE EJECUTA (binding D1 ✓, tabla creada ✓). Pendiente: `POST /api/contacto` lanza
+> excepción runtime (HTTP 500 / code 1101) = panic de Go en el handler (json.Decode o
+> db.Create por la vía wasm). Requiere `wrangler tail` o repro local para el mensaje.
+
+> **Repo destino (histórico):** `tinywasm/goflare`.
+> **Síntoma original:** el sitio estático vivía en `*.pages.dev` pero
+> **`POST /api/contacto` devolvía HTTP 405** porque la Function se subía como estático.
 
 ---
 
