@@ -10,20 +10,16 @@ require (
 	github.com/tinywasm/js v0.0.4
 	github.com/tinywasm/jsvalue v0.0.12
 	github.com/tinywasm/orm v0.9.5
-	github.com/tinywasm/sqlite v0.2.3
 	github.com/tinywasm/sqlt v0.0.3
 	github.com/tinywasm/tinygo v0.0.11
+	lukechampine.com/blake3 v1.4.1
 )
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0 // indirect
 	github.com/danieljoos/wincred v1.2.3 // indirect
-	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
-	github.com/google/uuid v1.6.0 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/ncruces/go-strftime v1.0.0 // indirect
-	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/tdewolff/parse/v2 v2.8.11 // indirect
 	github.com/tinywasm/context v0.0.18 // indirect
 	github.com/tinywasm/css v0.1.2 // indirect
@@ -43,8 +39,4 @@ require (
 	github.com/zalando/go-keyring v0.2.6 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/term v0.41.0 // indirect
-	modernc.org/libc v1.69.0 // indirect
-	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.46.1 // indirect
 )

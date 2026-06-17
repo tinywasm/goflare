@@ -4,8 +4,8 @@ package goflare
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,6 +16,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"lukechampine.com/blake3"
 )
 
 const cfAPIBase = "https://api.cloudflare.com/client/v4"
@@ -176,11 +178,15 @@ func (g *Goflare) DeployPages() error {
 			if err != nil {
 				return err
 			}
-			hash := sha256.Sum256(content)
-			hashHex := fmt.Sprintf("%x", hash)
+			// Cloudflare Pages asset key: blake3(base64(content)+ext).hex()[:32]
+			// (matches wrangler; a plain sha256 hash is rejected with HTTP 500 code 1101).
+			b64 := base64.StdEncoding.EncodeToString(content)
+			ext := strings.TrimPrefix(filepath.Ext(path), ".")
+			sum := blake3.Sum256([]byte(b64 + ext))
+			hashHex := hex.EncodeToString(sum[:])[:32]
 			files = append(files, uploadFile{
 				Key:      hashHex,
-				Value:    base64.StdEncoding.EncodeToString(content),
+				Value:    b64,
 				Metadata: map[string]string{"contentType": detectContentType(path)},
 				Base64:   true,
 			})
