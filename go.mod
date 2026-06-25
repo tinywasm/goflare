@@ -5,7 +5,7 @@ go 1.25.2
 require (
 	github.com/tdewolff/minify/v2 v2.24.12
 	github.com/tinywasm/assetmin v0.4.2
-	github.com/tinywasm/client v0.6.14
+	github.com/tinywasm/client v0.6.15
 	github.com/tinywasm/fmt v0.24.4
 	github.com/tinywasm/js v0.0.4
 	github.com/tinywasm/jsvalue v0.0.13
@@ -16,7 +16,6 @@ require (
 )
 
 require (
-	al.essio.dev/pkg/shellescape v1.6.0 // indirect
 	github.com/danieljoos/wincred v1.2.3 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
@@ -35,7 +34,7 @@ require (
 	github.com/tinywasm/time v0.5.0 // indirect
 	github.com/tinywasm/unixid v0.2.23 // indirect
 	github.com/tinywasm/wizard v0.0.23 // indirect
-	github.com/zalando/go-keyring v0.2.6 // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/term v0.41.0 // indirect
+	github.com/zalando/go-keyring v0.2.8 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/term v0.44.0 // indirect
 )
