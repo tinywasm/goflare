@@ -23,15 +23,15 @@ require (
 	github.com/tinywasm/context v0.0.18 // indirect
 	github.com/tinywasm/css v0.1.2 // indirect
 	github.com/tinywasm/devflow v0.4.33 // indirect
-	github.com/tinywasm/dom v0.10.1 // indirect
+	github.com/tinywasm/dom v0.11.0 // indirect
 	github.com/tinywasm/fetch v0.1.24 // indirect
 	github.com/tinywasm/form v0.2.10 // indirect
 	github.com/tinywasm/gobuild v0.0.25 // indirect
 	github.com/tinywasm/gorun v0.0.23 // indirect
-	github.com/tinywasm/html v0.0.4 // indirect
+	github.com/tinywasm/html v0.0.5 // indirect
 	github.com/tinywasm/json v0.5.6 // indirect
 	github.com/tinywasm/mcp v0.1.13 // indirect
-	github.com/tinywasm/svg v0.0.5 // indirect
+	github.com/tinywasm/svg v0.1.0 // indirect
 	github.com/tinywasm/time v0.5.0 // indirect
 	github.com/tinywasm/unixid v0.2.23 // indirect
 	github.com/tinywasm/wizard v0.0.23 // indirect
