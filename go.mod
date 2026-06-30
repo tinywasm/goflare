@@ -23,7 +23,7 @@ require (
 	github.com/tinywasm/context v0.0.18 // indirect
 	github.com/tinywasm/css v0.1.2 // indirect
 	github.com/tinywasm/devflow v0.4.33 // indirect
-	github.com/tinywasm/dom v0.11.1 // indirect
+	github.com/tinywasm/dom v0.11.2 // indirect
 	github.com/tinywasm/fetch v0.1.24 // indirect
 	github.com/tinywasm/form v0.2.10 // indirect
 	github.com/tinywasm/gobuild v0.0.25 // indirect
