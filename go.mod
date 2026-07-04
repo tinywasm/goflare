@@ -30,7 +30,8 @@ require (
 	github.com/tinywasm/gorun v0.0.24 // indirect
 	github.com/tinywasm/html v0.0.5 // indirect
 	github.com/tinywasm/json v0.5.6 // indirect
-	github.com/tinywasm/mcp v0.1.13 // indirect
+	github.com/tinywasm/mcp v0.1.14 // indirect
+	github.com/tinywasm/router v0.1.1 // indirect
 	github.com/tinywasm/svg v0.1.0 // indirect
 	github.com/tinywasm/time v0.5.0 // indirect
 	github.com/tinywasm/unixid v0.2.23 // indirect
