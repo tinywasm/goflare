@@ -5,12 +5,12 @@ go 1.25.2
 require (
 	github.com/tdewolff/minify/v2 v2.24.12
 	github.com/tinywasm/assetmin v0.4.3
-	github.com/tinywasm/client v0.6.19
-	github.com/tinywasm/fmt v0.24.6
+	github.com/tinywasm/client v0.6.20
+	github.com/tinywasm/fmt v0.25.0
 	github.com/tinywasm/js v0.0.4
 	github.com/tinywasm/jsvalue v0.0.13
-	github.com/tinywasm/orm v0.9.18
-	github.com/tinywasm/sqlt v0.0.5
+	github.com/tinywasm/orm v0.9.19
+	github.com/tinywasm/sqlt v0.0.6
 	github.com/tinywasm/tinygo v0.0.11
 	lukechampine.com/blake3 v1.4.1
 )
@@ -25,13 +25,14 @@ require (
 	github.com/tinywasm/devflow v0.4.36 // indirect
 	github.com/tinywasm/dom v0.11.2 // indirect
 	github.com/tinywasm/fetch v0.1.24 // indirect
-	github.com/tinywasm/form v0.2.11 // indirect
+	github.com/tinywasm/form v0.2.12 // indirect
 	github.com/tinywasm/gobuild v0.0.26 // indirect
 	github.com/tinywasm/gorun v0.0.24 // indirect
 	github.com/tinywasm/html v0.0.5 // indirect
-	github.com/tinywasm/json v0.5.6 // indirect
-	github.com/tinywasm/mcp v0.1.15 // indirect
-	github.com/tinywasm/router v0.1.2 // indirect
+	github.com/tinywasm/json v0.5.8 // indirect
+	github.com/tinywasm/mcp v0.1.16 // indirect
+	github.com/tinywasm/model v0.0.2 // indirect
+	github.com/tinywasm/router v0.1.3 // indirect
 	github.com/tinywasm/svg v0.1.0 // indirect
 	github.com/tinywasm/time v0.5.0 // indirect
 	github.com/tinywasm/unixid v0.2.23 // indirect
