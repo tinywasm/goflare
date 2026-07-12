@@ -116,6 +116,16 @@ g.Deploy()
 | `Domain` | `DOMAIN` | — | optional custom domain |
 | `CompilerMode` | `COMPILER_MODE` | `S` | `S`=small/prod, `M`=debug, `L`=Go std |
 
+## Testing
+
+Edge code talks to `js.Global()`, not to Cloudflare — so it is tested in a browser against a
+fake `context.env`, with **no deploy and no wrangler**. See **[docs/TESTING.md](docs/TESTING.md)**
+for the three tiers and the rule for choosing one.
+
+```bash
+gotest    # never `go test` — dual WASM/stdlib, browser-driven
+```
+
 ## Requirements
 - Go 1.25.2+
 - TinyGo — installed automatically by `goflare build` via `tinywasm/tinygo`
