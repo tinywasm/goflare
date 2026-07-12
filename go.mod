@@ -29,7 +29,7 @@ require (
 	github.com/tinywasm/gobuild v0.0.26 // indirect
 	github.com/tinywasm/gorun v0.0.24 // indirect
 	github.com/tinywasm/html v0.0.5 // indirect
-	github.com/tinywasm/json v0.5.10 // indirect
+	github.com/tinywasm/json v0.5.11 // indirect
 	github.com/tinywasm/mcp v0.1.20 // indirect
 	github.com/tinywasm/model v0.0.8 // indirect
 	github.com/tinywasm/router v0.1.4 // indirect
