@@ -15,7 +15,7 @@ message: "feat: raw binary request body + R2 bucket binding for edge file upload
 | Orden | Plan | Estado | Asunto |
 |-------|------|--------|--------|
 | 1 | [PLAN_STAGE_1_ROUTER.md](PLAN_STAGE_1_ROUTER.md) | ✅ **COMPLETADA** | `goflare` deja de ser dueño del contrato de enrutado y pasa a implementarlo: borra el fork `goflare/router`, reconstruye `devserver/` sobre `server/httpd`, renombra `pages/` → `edge/` y endurece la detección de modo. |
-| 2 | [PLAN_STAGE_2_FILES.md](PLAN_STAGE_2_FILES.md) | ☐ **PENDIENTE** | Subir y servir archivos en el borde: arregla la corrupción silenciosa del cuerpo binario en `workers/request.go` y añade el bucket R2 (`r2/`). |
+| 2 | [PLAN_STAGE_2_FILES.md](PLAN_STAGE_2_FILES.md) | ☐ **PENDIENTE** | Subir y servir archivos en el borde: implementa `PublicAsset`/`PublicDir` del contrato nuevo (**Paso 0 — sin esto el repo no compila**), arregla la corrupción silenciosa del cuerpo binario en `workers/request.go` y añade el bucket R2 (`r2/`). |
 
 ## ⛔ Compuerta — no despachar la Etapa 2 todavía
 

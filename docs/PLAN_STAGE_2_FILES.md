@@ -50,6 +50,69 @@ Aquí **sí** rige la regla tinywasm: **nada de librería estándar** — usa `t
 
 ---
 
+## Paso 0 — `edge` implementa el contrato nuevo: `PublicAsset` / `PublicDir`
+
+**Empieza por aquí: sin esto el repo no compila.** `tinywasm/router` **v0.1.7** añadió dos
+métodos a la interfaz `Router`, así que `wasmRouter` (`edge/edge.go`) ya no la satisface.
+Es un fallo de compilación deliberado: todo implementador debe decidir cómo sirve archivos.
+
+Sube `github.com/tinywasm/router` a **v0.1.7** o superior en el `go.mod` y añade a
+`edge/edge.go`, junto a `Get`/`Post`/… (que se quedan igual):
+
+```go
+// PublicAsset registra UNA ruta que sirve UN archivo al navegador.
+// Público por construcción: quien pide index.html, la hoja de estilos, el bundle o
+// el wasm todavía no tiene identidad. No devuelve router.Route — no hay permiso que
+// colgarle, así que un asset no puede quedar privado por olvido ni cerrarse por error.
+func (r *wasmRouter) PublicAsset(path string, h router.HandlerFunc) {
+	route := &wasmRoute{
+		info:    router.RouteInfo{Method: "GET", Path: path, Public: true},
+		handler: h,
+	}
+	r.routes = append(r.routes, route)
+}
+
+// PublicDir sirve un directorio bajo un prefijo. Mismo contrato.
+func (r *wasmRouter) PublicDir(prefix string, dir string) {
+	route := &wasmRoute{
+		info: router.RouteInfo{Method: "GET", Path: prefix, Public: true, Dir: dir},
+	}
+	r.routes = append(r.routes, route)
+}
+```
+
+Ajusta los nombres de campo a los de `wasmRoute` que ya existen en el archivo (hoy tiene
+`info router.RouteInfo`); **no cambies la forma de `wasmRoute` ni la de `Routes()`**.
+
+### Por qué existen estos métodos (contexto, no lo reabras)
+
+El router es **privado por defecto**: una ruta que no declara `Public()` ni `Requires()`
+deniega a quien no tiene identidad. Correcto — y no se toca.
+
+El problema era que los archivos se registraban con `Get(...)` a secas. Un navegador
+pidiendo `index.html` **siempre es anónimo**, así que recibía **403** y la página salía en
+blanco pese a que el build era correcto. Pasó en tres repos independientes.
+
+Se descartó la solución obvia —añadir `.Public()` a cada ruta de assets— porque es
+justo el *"no olvides llamar a X"* que el arnés prohíbe: el olvido no falla en compilación
+ni hace ruido. Con `PublicAsset` **no hay nada que olvidar**: es público por construcción.
+
+**La asimetría es deliberada.** *Abrir* (servir un archivo al mundo) tiene método propio
+porque el olvido es un fallo silencioso. *Cerrar* (exigir permisos) no lo necesita: ya falla
+seguro. Servir un archivo **con permisos** sigue siendo una ruta normal —
+`r.Get("/factura/:id", h).Requires("invoices", "read")`— y si olvidas el `Requires`, la
+ruta queda **privada**, nunca expuesta.
+
+> ⚠️ En este repo **no añadas ningún `FileServer` ni regla por prefijo** que sirva archivos
+> por fuera del router: eso los pone fuera del sistema de permisos. Ese error concreto
+> existía en `server/httpd` y se está retirando allí. Coordinado por
+> `tinywasm/docs/PUBLIC_ASSETS_MASTER_PLAN.md` (Fase B2 = este paso).
+
+**Aceptación del paso 0:** `var _ router.Router = (*wasmRouter)(nil)` compila, y un test con
+`PublicAsset` afirma que la ruta sale con `Public: true` en `Routes()`.
+
+---
+
 ## Paso 1 — Cuerpo binario **y perezoso** en `workers/request.go`
 
 Dos cambios en la misma función, y el segundo es de seguridad.
@@ -315,6 +378,10 @@ Recuerda la regla de la Etapa 1: **privado por defecto**. Una ruta sin `.Public(
 ## Criterios de aceptación (verificables)
 
 ```bash
+# 0. edge satisface el contrato nuevo, y ninguna ruta de archivos escapa al router
+grep -rn "PublicAsset\|PublicDir" edge/            # → ambos implementados
+grep -rn "FileServer\|http.Dir" .                  # → vacío: nada fuera del router
+
 # 1. No queda ninguna ruta de lectura como texto
 grep -rn "readBodyText\|\.Call(\"text\")" workers/   # → vacío
 
