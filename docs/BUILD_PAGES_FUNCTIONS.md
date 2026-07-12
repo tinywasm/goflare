@@ -20,7 +20,7 @@ CLOUDFLARE_ACCOUNT_ID=your-account-id
 
 ## Workflow
 
-1. Develop your application in Go using `github.com/tinywasm/goflare/pages`.
+1. Develop your application in Go using `github.com/tinywasm/goflare/edge`.
 2. Run `goflare build` to generate artifacts.
 3. Files in `functions/` and `web/public/` should be uploaded to your repository.
 4. Cloudflare Pages will detect changes and deploy automatically if you have Git integration configured.
