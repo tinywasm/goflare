@@ -3,11 +3,12 @@
 package goflare
 
 import (
-	"bufio"
 	"errors"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
-	"strings"
+	"strconv"
 )
 
 // Mode represents the inferred project build mode.
@@ -18,13 +19,19 @@ const (
 	ModeWorkers        Mode = "workers"
 	ModePagesFunctions Mode = "pages-functions"
 	ModePagesStatic    Mode = "pages"
+
+	ImportEdge    = "github.com/tinywasm/goflare/edge"
+	ImportWorkers = "github.com/tinywasm/goflare/workers"
+
+	ErrNoKnownImport = "cannot infer mode: edge/main.go imports neither " + ImportEdge + " (pages-functions) nor " + ImportWorkers + " (workers)"
+	ErrAmbiguous     = "cannot infer mode: edge/main.go imports both " + ImportEdge + " and " + ImportWorkers + " — import exactly one"
 )
 
 // inferMode determines the project mode by inspecting edge/main.go imports.
 //
 // Returns:
-//   - ModePagesFunctions if edge/main.go imports github.com/tinywasm/goflare/pages
-//   - ModeWorkers if edge/main.go imports github.com/tinywasm/goflare/workers (or exists but has no goflare import)
+//   - ModePagesFunctions if edge/main.go imports github.com/tinywasm/goflare/edge
+//   - ModeWorkers if edge/main.go imports github.com/tinywasm/goflare/workers
 //   - ModePagesStatic if edge/main.go does not exist but PublicDir does
 //   - ModeUnknown + error otherwise
 //
@@ -40,26 +47,34 @@ func inferMode(entry, publicDir string) (Mode, error) {
 		return ModeUnknown, errors.New("cannot infer mode: " + mainGo + " does not exist and no PublicDir")
 	}
 
-	f, err := os.Open(mainGo)
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, mainGo, nil, parser.ImportsOnly)
 	if err != nil {
 		return ModeUnknown, err
 	}
-	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if strings.Contains(line, `"github.com/tinywasm/goflare/pages"`) {
-			return ModePagesFunctions, nil
+	hasEdge := false
+	hasWorkers := false
+
+	for _, spec := range f.Imports {
+		path, _ := strconv.Unquote(spec.Path.Value)
+		if path == ImportEdge {
+			hasEdge = true
 		}
-		if strings.Contains(line, `"github.com/tinywasm/goflare/workers"`) {
-			return ModeWorkers, nil
+		if path == ImportWorkers {
+			hasWorkers = true
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		return ModeUnknown, err
+
+	if hasEdge && hasWorkers {
+		return ModeUnknown, errors.New(ErrAmbiguous)
+	}
+	if hasEdge {
+		return ModePagesFunctions, nil
+	}
+	if hasWorkers {
+		return ModeWorkers, nil
 	}
 
-	// edge/main.go exists but no goflare import — treat as workers (legacy default)
-	return ModeWorkers, nil
+	return ModeUnknown, errors.New(ErrNoKnownImport)
 }

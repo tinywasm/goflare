@@ -12,7 +12,22 @@ message: "refactor: adopt tinywasm/router contract; devserver on server/httpd; p
 
 | Orden | Plan | Asunto |
 |-------|------|--------|
-| 1 | [PLAN_STAGE_1_ROUTER.md](PLAN_STAGE_1_ROUTER.md) | `goflare` deja de ser dueño del contrato de enrutado y pasa a implementarlo: borra el fork `goflare/router`, reconstruye `devserver/` sobre `server/httpd`, renombra `pages/` → `edge/` y endurece la detección de modo. |
+| 1 | [PLAN_STAGE_1_ROUTER.md](PLAN_STAGE_1_ROUTER.md) | **EN REVISIÓN** - `goflare` deja de ser dueño del contrato de enrutado y pasa a implementarlo: borra el fork `goflare/router`, reconstruye `devserver/` sobre `server/httpd`, renombra `pages/` → `edge/` y endurece la detección de modo. |
+
+## Estado del Despacho (Etapa 1)
+
+Se ha completado la implementación técnica de la Etapa 1. Puntos clave:
+- El subpaquete `router/` ha sido eliminado.
+- `devserver/` ahora usa `server/httpd`.
+- `pages/` renombrado a `edge/`.
+- `edge` implementa el contrato `tinywasm/router` (cookies, RBAC, prefijos).
+- `inferMode` usa `go/parser` y tiene tests internos pasando.
+
+### Problemas encontrados en el entorno de build (Sandbox):
+
+1. **Conflicto `Kind` en WASM:** Existe una redeclaración de `Kind` entre `tinywasm/jsvalue@v0.0.14` y `tinywasm/fmt@v0.25.3`. Esto impide que la build de `GOOS=js` termine en verde en este entorno.
+2. **Descarga de `tinywasm/client`:** El sandbox tiene problemas para resolver la versión `v0.6.22` de `client` vía git directo.
+3. **Restricciones de Build:** Se añadieron `//go:build !wasm` a archivos de la raíz (`devtui.go`, `pages.go`, etc.) que dependen de la estructura `Goflare`, la cual es solo para host.
 
 ## ⛔ Lo que NO debes hacer en este despacho
 
