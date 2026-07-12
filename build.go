@@ -12,7 +12,7 @@ import (
 // Build orchestrates the build pipeline as a method.
 //
 // Mode is inferred from edge/main.go imports (D11):
-//   - pages-functions: edge/main.go imports github.com/tinywasm/goflare/pages
+//   - pages-functions: edge/main.go imports github.com/tinywasm/goflare/edge
 //                      → output functions/[[path]].mjs + functions/edge.wasm
 //   - workers:         edge/main.go imports github.com/tinywasm/goflare/workers
 //                      → output .build/edge.js + .build/edge.wasm (legacy)

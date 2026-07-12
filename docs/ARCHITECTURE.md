@@ -37,7 +37,7 @@ GoFlare is a Go library and CLI that bridges the gap between Go source code and 
 - **Memory Store:** An exported `MemoryStore` is provided for testing and library consumers. Local keyring management has been removed in favor of platform-based secrets (CI/CD).
 
 ### 3. Build Pipeline (`build.go`, `mode.go`, `javascripts.go`, `wasm.go`)
-- **Mode Inference (`mode.go`):** `inferMode()` reads `edge/main.go` and inspects imports — `tinywasm/goflare/pages` → Pages Functions; `tinywasm/goflare/workers` → Workers; no entry but PublicDir → static Pages. `.env` does NOT carry a `MODE` variable; the code is the source of truth.
+- **Mode Inference (`mode.go`):** `inferMode()` reads `edge/main.go` and inspects imports — `tinywasm/goflare/edge` → Pages Functions; `tinywasm/goflare/workers` → Workers; no entry but PublicDir → static Pages. `.env` does NOT carry a `MODE` variable; the code is the source of truth.
 - **Worker Build:** Produces `.build/edge.js` (bundled) and `.build/edge.wasm`.
 - **Pages Functions Build:** Produces `functions/[[path]].mjs` (catch-all, exports `onRequest`) and `functions/edge.wasm`. Outputs go directly to the project tree (no `.build/` staging) so they can be committed and served via CF Git Integration.
 - **Static Pages Build:** Copies/delegates static assets (frontend WASM produced by the tinywasm framework, assetmin for JS/CSS).
@@ -78,7 +78,7 @@ goflare/
 
 | Inferred from `edge/main.go` import | Mode | Output |
 |---|---|---|
-| `github.com/tinywasm/goflare/pages` | `pages-functions` | `functions/[[path]].mjs` + `functions/edge.wasm` (committed to git) |
+| `github.com/tinywasm/goflare/edge` | `pages-functions` | `functions/[[path]].mjs` + `functions/edge.wasm` (committed to git) |
 | `github.com/tinywasm/goflare/workers` | `workers` | `.build/edge.js` + `.build/edge.wasm` (gitignored, Direct Upload) |
 | (no entry, only `web/public/`) | `pages` (static) | static assets only |
 

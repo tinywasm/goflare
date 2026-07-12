@@ -1,3 +1,5 @@
+//go:build !wasm
+
 package goflare
 
 func (h *Goflare) Name() string { return "GOFLARE" }
