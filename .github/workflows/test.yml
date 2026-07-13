@@ -10,12 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      GOPRIVATE: github.com/tinywasm/*
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
         with:
           go-version: 'stable'
+
+      - name: Configure GitHub Token
+        run: |
+          printf "machine github.com\n  login ${{ github.actor }}\n  password ${{ secrets.GITHUB_TOKEN }}\n" > ~/.netrc
+          chmod 600 ~/.netrc
 
       - name: Vet
         run: go vet ./...

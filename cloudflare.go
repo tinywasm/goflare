@@ -351,7 +351,37 @@ func (g *Goflare) DeployWorker() error {
 	mw := multipart.NewWriter(&buf)
 
 	// metadata
-	metadata := map[string]string{"main_module": "edge.js"}
+	metadata := map[string]any{"main_module": "edge.js"}
+	var bindings []any
+
+	if g.Config.D1DatabaseID != "" {
+		dbName := g.Config.D1DatabaseName
+		if dbName == "" {
+			dbName = "DB"
+		}
+		bindings = append(bindings, map[string]string{
+			"type": "d1",
+			"name": dbName,
+			"id":   g.Config.D1DatabaseID,
+		})
+	}
+
+	if g.Config.R2BucketID != "" {
+		bucketName := g.Config.R2BucketName
+		if bucketName == "" {
+			bucketName = "FILES"
+		}
+		bindings = append(bindings, map[string]string{
+			"type":        "r2_bucket",
+			"name":        bucketName,
+			"bucket_name": g.Config.R2BucketID, // API uses bucket_name for the ID/physical name
+		})
+	}
+
+	if len(bindings) > 0 {
+		metadata["bindings"] = bindings
+	}
+
 	metadataJSON, _ := json.Marshal(metadata)
 	if err := mw.WriteField("metadata", string(metadataJSON)); err != nil {
 		return err

@@ -18,6 +18,8 @@ const (
 	EnvKeyCompilerMode   = "COMPILER_MODE"
 	EnvKeyD1DatabaseID   = "D1_DATABASE_ID"
 	EnvKeyD1DatabaseName = "D1_DATABASE_NAME"
+	EnvKeyR2BucketID     = "R2_BUCKET_ID"
+	EnvKeyR2BucketName   = "R2_BUCKET_NAME"
 )
 
 // LoadConfigFromEnv reads a .env file and populates Config.
@@ -65,6 +67,10 @@ func LoadConfigFromEnv(path string) (*Config, error) {
 					cfg.D1DatabaseID = value
 				case EnvKeyD1DatabaseName:
 					cfg.D1DatabaseName = value
+				case EnvKeyR2BucketID:
+					cfg.R2BucketID = value
+				case EnvKeyR2BucketName:
+					cfg.R2BucketName = value
 				}
 			}
 			if err := scanner.Err(); err != nil {
@@ -94,6 +100,12 @@ func LoadConfigFromEnv(path string) (*Config, error) {
 	}
 	if cfg.D1DatabaseName == "" {
 		cfg.D1DatabaseName = os.Getenv(EnvKeyD1DatabaseName)
+	}
+	if cfg.R2BucketID == "" {
+		cfg.R2BucketID = os.Getenv(EnvKeyR2BucketID)
+	}
+	if cfg.R2BucketName == "" {
+		cfg.R2BucketName = os.Getenv(EnvKeyR2BucketName)
 	}
 
 	cfg.applyDefaults()

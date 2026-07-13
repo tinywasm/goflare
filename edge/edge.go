@@ -171,6 +171,23 @@ func (r *wasmRouter) Handle(method, path string, h router.HandlerFunc) router.Ro
 	return rt
 }
 
+// PublicAsset registra UNA ruta que sirve UN archivo al navegador.
+func (r *wasmRouter) PublicAsset(path string, h router.HandlerFunc) {
+	route := &wasmRoute{
+		info: router.RouteInfo{Method: "GET", Path: path, Public: true},
+		h:    h,
+	}
+	r.routes = append(r.routes, route)
+}
+
+// PublicDir sirve un directorio bajo un prefijo. Mismo contrato.
+func (r *wasmRouter) PublicDir(prefix string, dir string) {
+	route := &wasmRoute{
+		info: router.RouteInfo{Method: "GET", Path: prefix, Public: true, Dir: dir},
+	}
+	r.routes = append(r.routes, route)
+}
+
 func (r *wasmRouter) Use(m ...router.Middleware) {
 	r.middlewares = append(r.middlewares, m...)
 }
