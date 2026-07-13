@@ -19,7 +19,9 @@ jobs:
           go-version: 'stable'
 
       - name: Configure GitHub Token
-        run: git config --global url."https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+        run: |
+          printf "machine github.com\n  login ${{ github.actor }}\n  password ${{ secrets.GITHUB_TOKEN }}\n" > ~/.netrc
+          chmod 600 ~/.netrc
 
       - name: Vet
         run: go vet ./...

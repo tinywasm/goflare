@@ -110,7 +110,7 @@ func (b *Bucket) List(prefix string) ([]ObjectInfo, error) {
 		o := jsObjects.Index(i)
 		info := ObjectInfo{
 			Key:  o.Get("key").String(),
-			Size: int64(o.Get("size").Int()),
+			Size: int64(o.Get("size").Float()),
 		}
 		httpMetadata := o.Get("httpMetadata")
 		if !httpMetadata.IsUndefined() && !httpMetadata.IsNull() {
