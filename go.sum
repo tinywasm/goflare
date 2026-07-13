@@ -45,8 +45,8 @@ github.com/tinywasm/gobuild v0.0.26 h1:19Cyzb3nYlueWPRPEQNdTM6+OXTXuP5Ro+jNBYj3p
 github.com/tinywasm/gobuild v0.0.26/go.mod h1:48JVlXnOy8ZBiz/vz5rWMxv4ZrQvB5Fbw22kOx6RfZY=
 github.com/tinywasm/gorun v0.0.24 h1:qduMrpcw0nf65nx8Fi2duBWN7pCIwXxePPa9KL0rmWM=
 github.com/tinywasm/gorun v0.0.24/go.mod h1:9pApF2ZoaH/km6kGBVxL5WlStOoLwEZiV1uG4R4qeKo=
-github.com/tinywasm/html v0.0.5 h1:a6CwRepD2YUQ6FP5vuoaZxJRFG/A4iIFKb+yFBuYvh4=
-github.com/tinywasm/html v0.0.5/go.mod h1:ffPNOzJZuIy/KTY3SQ/FOvFfSBi3z1C6ZyiS7RrtHyc=
+github.com/tinywasm/html v0.0.6 h1:8W/jXGKAhn5vPVx8y2HKAUIr1v2A1ofVkE47CJPkeu0=
+github.com/tinywasm/html v0.0.6/go.mod h1:Bc++Sre7mPqhAzLcG1VlNAA6qmE/OCf22oywnq5tn7I=
 github.com/tinywasm/js v0.0.4 h1:dG4SHMpY48kg0A6rnL4aqf6pclurV52y893fG0ovfJ4=
 github.com/tinywasm/js v0.0.4/go.mod h1:VNNOpFiVwfN3B6ZYG9HPZRp8sCOjcNd78c5TQcPzf0E=
 github.com/tinywasm/json v0.5.11 h1:hG8RYmwtbxs4pC/i3EgQgsWe2C42LhUSA3i+YzPt818=

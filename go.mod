@@ -38,7 +38,7 @@ require (
 	github.com/tinywasm/fetch v0.1.24 // indirect
 	github.com/tinywasm/gobuild v0.0.26 // indirect
 	github.com/tinywasm/gorun v0.0.24 // indirect
-	github.com/tinywasm/html v0.0.5 // indirect
+	github.com/tinywasm/html v0.0.6 // indirect
 	github.com/tinywasm/json v0.5.11 // indirect
 	github.com/tinywasm/mcp v0.1.20 // indirect
 	github.com/tinywasm/model v0.0.12 // indirect
