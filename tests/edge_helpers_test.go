@@ -5,7 +5,65 @@ package goflare_test
 import (
 	"syscall/js"
 	"testing"
+
+	"github.com/tinywasm/router"
 )
+
+// captureRoute records the permissions a handler was registered with.
+type captureRoute struct {
+	public   bool
+	requires bool
+}
+
+func (r *captureRoute) Requires(resource, action string) router.Route {
+	r.requires = true
+	return r
+}
+func (r *captureRoute) Public() router.Route {
+	r.public = true
+	return r
+}
+
+// captureRouter is a router.Router that keeps the handlers instead of serving them,
+// so a test can call one directly and inspect how it was registered.
+type captureRouter struct {
+	get, put router.HandlerFunc
+	getRoute *captureRoute
+	putRoute *captureRoute
+}
+
+func (r *captureRouter) Get(path string, h router.HandlerFunc) router.Route {
+	r.get = h
+	r.getRoute = &captureRoute{}
+	return r.getRoute
+}
+func (r *captureRouter) Put(path string, h router.HandlerFunc) router.Route {
+	r.put = h
+	r.putRoute = &captureRoute{}
+	return r.putRoute
+}
+func (r *captureRouter) Post(path string, h router.HandlerFunc) router.Route {
+	return &captureRoute{}
+}
+func (r *captureRouter) Delete(path string, h router.HandlerFunc) router.Route {
+	return &captureRoute{}
+}
+func (r *captureRouter) Options(path string, h router.HandlerFunc) router.Route {
+	return &captureRoute{}
+}
+func (r *captureRouter) Handle(method, path string, h router.HandlerFunc) router.Route {
+	return &captureRoute{}
+}
+func (r *captureRouter) Stream(path string, h router.StreamFunc) router.Route {
+	return &captureRoute{}
+}
+func (r *captureRouter) Socket(path string, h router.SocketFunc) router.Route {
+	return &captureRoute{}
+}
+func (r *captureRouter) PublicAsset(path string, h router.HandlerFunc) {}
+func (r *captureRouter) PublicDir(prefix string, dir string)           {}
+func (r *captureRouter) Use(m ...router.Middleware)                    {}
+func (r *captureRouter) Routes() []router.RouteInfo                    { return nil }
 
 // promise wraps a value in a resolved JS Promise — every Cloudflare binding is async.
 func promise(v js.Value) js.Value {
