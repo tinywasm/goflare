@@ -38,6 +38,8 @@ type Config struct {
 
 	D1DatabaseID   string // D1_DATABASE_ID
 	D1DatabaseName string // D1_DATABASE_NAME — optional, default: ProjectName
+	R2BucketID     string // R2_BUCKET_ID
+	R2BucketName   string // R2_BUCKET_NAME
 }
 
 type Goflare struct {

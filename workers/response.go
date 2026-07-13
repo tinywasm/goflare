@@ -45,5 +45,11 @@ func (w *Response) build() js.Value {
 	init.Set("status", w.status)
 	init.Set("headers", h)
 
-	return js.Global().Get("Response").New(js.ValueOf(w.buf.String()), init)
+	// Binary-safe body transfer: copy bytes to a Uint8Array
+	// rather than passing a string (which corrupts non-UTF8 data).
+	b := w.buf.Bytes()
+	ua := js.Global().Get("Uint8Array").New(len(b))
+	js.CopyBytesToJS(ua, b)
+
+	return js.Global().Get("Response").New(ua, init)
 }
