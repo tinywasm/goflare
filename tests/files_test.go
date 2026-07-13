@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/goflare/files"
 	"github.com/tinywasm/goflare/r2"
 	"github.com/tinywasm/router"
@@ -213,5 +214,30 @@ func TestFiles_MountRegistersUploadPrivateAndServePublic(t *testing.T) {
 	}
 	if r.getRoute == nil || !r.getRoute.public {
 		t.Error("serve must be public — an <img src> cannot send headers")
+	}
+}
+
+// brokenBucket fails every write, like an R2 binding pointing at a bucket that does not exist.
+type brokenBucket struct{}
+
+func (brokenBucket) Put(key string, data []byte, contentType string) error {
+	return fmt.Err("r2: put " + key + ": bucket unreachable")
+}
+func (brokenBucket) Get(key string) ([]byte, string, error) {
+	return nil, "", fmt.Err("r2: get " + key + ": bucket unreachable")
+}
+
+func TestFiles_BucketFailureIs502AndKeepsTheCause(t *testing.T) {
+	s, err := files.New(brokenBucket{}, filesPrefix)
+	if err != nil {
+		t.Fatalf("files.New: %v", err)
+	}
+
+	ctx := newCtx("PUT", filesPrefix, pngBytes)
+	upload(t, s, ctx)
+
+	// A storage failure is ours, not the client's: it must not be reported as a 4xx.
+	if ctx.status != 502 {
+		t.Errorf("status = %d, want 502", ctx.status)
 	}
 }

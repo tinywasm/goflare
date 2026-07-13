@@ -33,17 +33,19 @@ func (b *Bucket) Put(key string, data []byte, contentType string) error {
 		opts.Set("httpMetadata", httpMetadata)
 	}
 
-	_, err := jsvalue.AwaitPromise(b.obj.Call("put", key, ua, opts))
-	return err
+	if _, err := jsvalue.AwaitPromise(b.obj.Call("put", key, ua, opts)); err != nil {
+		return fmt.Errf("r2: put %s: %s", key, err.Error())
+	}
+	return nil
 }
 
 func (b *Bucket) Get(key string) ([]byte, string, error) {
 	obj, err := jsvalue.AwaitPromise(b.obj.Call("get", key))
 	if err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errf("r2: get %s: %s", key, err.Error())
 	}
 	if obj.IsNull() || obj.IsUndefined() {
-		return nil, "", fmt.Err("r2: object not found")
+		return nil, "", fmt.Errf("r2: object not found: %s", key)
 	}
 
 	// obj is an R2Object. To get the data, we need to read from the body stream.
@@ -53,7 +55,7 @@ func (b *Bucket) Get(key string) ([]byte, string, error) {
 	jsBody := obj.Get("body")
 	if jsBody.IsNull() || jsBody.IsUndefined() {
 		// Maybe it was just a metadata head() call, but we called get()
-		return nil, "", fmt.Err("r2: object has no body")
+		return nil, "", fmt.Errf("r2: object has no body: %s", key)
 	}
 
 	// We need to read the entire stream. Easiest way in this environment:
@@ -61,7 +63,7 @@ func (b *Bucket) Get(key string) ([]byte, string, error) {
 	resp := js.Global().Get("Response").New(jsBody)
 	arrayBuffer, err := jsvalue.AwaitPromise(resp.Call("arrayBuffer"))
 	if err != nil {
-		return nil, "", fmt.Errf("r2: read body: %s", err.Error())
+		return nil, "", fmt.Errf("r2: read body of %s: %s", key, err.Error())
 	}
 
 	byteLength := arrayBuffer.Get("byteLength").Int()
@@ -82,8 +84,10 @@ func (b *Bucket) Get(key string) ([]byte, string, error) {
 }
 
 func (b *Bucket) Delete(key string) error {
-	_, err := jsvalue.AwaitPromise(b.obj.Call("delete", key))
-	return err
+	if _, err := jsvalue.AwaitPromise(b.obj.Call("delete", key)); err != nil {
+		return fmt.Errf("r2: delete %s: %s", key, err.Error())
+	}
+	return nil
 }
 
 type ObjectInfo struct {
@@ -100,7 +104,7 @@ func (b *Bucket) List(prefix string) ([]ObjectInfo, error) {
 
 	res, err := jsvalue.AwaitPromise(b.obj.Call("list", opts))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errf("r2: list prefix %s: %s", prefix, err.Error())
 	}
 
 	jsObjects := res.Get("objects")

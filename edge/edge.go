@@ -6,6 +6,7 @@ import (
 	"syscall/js"
 
 	"github.com/tinywasm/fmt"
+	"github.com/tinywasm/goflare/log"
 	"github.com/tinywasm/goflare/workers"
 	"github.com/tinywasm/router"
 )
@@ -254,6 +255,9 @@ func Serve(r router.Router) {
 		if bestMatch != nil {
 			// RBAC check
 			if !bestMatch.info.Public && bestMatch.info.Resource == "" && ctx.UserID() == "" {
+				// The silent version of this 403 is why PublicAsset exists: a route that
+				// forgot to declare itself public serves a blank page and says nothing.
+				log.Reject(403, req.Method, pathname, "route is private by default: it declares neither Public() nor Requires()")
 				res.WriteHeader(403)
 				res.Write([]byte("Forbidden: Private by default"))
 				return
@@ -262,6 +266,7 @@ func Serve(r router.Router) {
 			// The plan says: "without marker and without identity -> 403"
 			// If Requires() was called, it should also probably check UserID.
 			if bestMatch.info.Resource != "" && ctx.UserID() == "" {
+				log.Reject(403, req.Method, pathname, "anonymous caller on a route requiring "+bestMatch.info.Resource)
 				res.WriteHeader(403)
 				res.Write([]byte("Forbidden: Identity required"))
 				return
@@ -276,6 +281,7 @@ func Serve(r router.Router) {
 			return
 		}
 
+		log.Reject(404, req.Method, pathname, "no route matches")
 		res.WriteHeader(404)
 		res.Write([]byte("Not Found"))
 	})

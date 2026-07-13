@@ -2,7 +2,11 @@
 
 package workers
 
-import "syscall/js"
+import (
+	"syscall/js"
+
+	"github.com/tinywasm/goflare/log"
+)
 
 // Handle registers fn as the single request handler and blocks forever.
 // fn is called for every incoming HTTP request to the Worker.
@@ -19,12 +23,29 @@ func Handle(fn func(*Response, *Request)) {
 
 	binding.Set("handleRequest", js.FuncOf(func(this js.Value, args []js.Value) any {
 		req := args[0]
-		return newPromise(func() (js.Value, error) {
+		return newPromise(func() (res js.Value, err error) {
+			method := req.Get("method").String()
+			url := req.Get("url").String()
+
 			r, err := newRequest(req)
 			if err != nil {
+				log.Fail(500, method, url, err)
 				return errorResponse(500, "failed to parse request"), nil
 			}
 			w := newResponse()
+
+			// The request boundary is the last place a panic can be caught. Past it the
+			// wasm instance dies and Cloudflare answers 1101 "Worker threw exception" with
+			// the cause nowhere to be found — and it takes every in-flight request with it.
+			// res is named so the recovered path still answers, instead of resolving the
+			// promise with an undefined Response.
+			defer func() {
+				if v := recover(); v != nil {
+					log.Panic(method, url, v)
+					res, err = errorResponse(500, "internal error"), nil
+				}
+			}()
+
 			fn(w, r)
 			return w.build(), nil
 		})

@@ -11,6 +11,7 @@ package files
 import (
 	"github.com/tinywasm/filetype"
 	"github.com/tinywasm/fmt"
+	"github.com/tinywasm/goflare/log"
 	"github.com/tinywasm/router"
 	"github.com/tinywasm/unixid"
 )
@@ -85,12 +86,14 @@ func (s *Store) Mount(r router.Router) {
 func (s *Store) upload(ctx router.Context) {
 	// Size first: Body() is lazy, so nothing has been buffered yet.
 	if n, ok := contentLength(ctx); ok && n > s.maxSize {
+		log.Reject(413, ctx.Method(), ctx.Path(), "declared size exceeds the limit")
 		ctx.WriteStatus(413)
 		return
 	}
 
 	data := ctx.Body()
 	if len(data) > s.maxSize {
+		log.Reject(413, ctx.Method(), ctx.Path(), "body exceeds the limit")
 		ctx.WriteStatus(413)
 		return
 	}
@@ -98,6 +101,9 @@ func (s *Store) upload(ctx router.Context) {
 	// The type comes from the bytes. The client's Content-Type is text it chose.
 	t, err := s.allow.Validate(data)
 	if err != nil {
+		// The reason names what the bytes actually were ("SVG is not allowed"), which is
+		// the difference between diagnosing an attack and staring at a 415.
+		log.Reject(415, ctx.Method(), ctx.Path(), err.Error())
 		ctx.WriteStatus(415)
 		ctx.Write([]byte(err.Error()))
 		return
@@ -107,6 +113,7 @@ func (s *Store) upload(ctx router.Context) {
 	key := s.ids.GetNewID() + t.Ext
 
 	if err := s.bucket.Put(key, data, t.MIME); err != nil {
+		log.Fail(502, ctx.Method(), ctx.Path(), err)
 		ctx.WriteStatus(502)
 		return
 	}
@@ -118,12 +125,16 @@ func (s *Store) upload(ctx router.Context) {
 func (s *Store) serve(ctx router.Context) {
 	key := ctx.Path()[len(s.prefix):]
 	if key == "" {
+		log.Reject(400, ctx.Method(), ctx.Path(), "no key in path")
 		ctx.WriteStatus(400)
 		return
 	}
 
 	data, ct, err := s.bucket.Get(key)
 	if err != nil {
+		// A missing key and a broken bucket both land here, so the cause is the only way
+		// to tell "that file was never uploaded" from "R2 is down".
+		log.Reject(404, ctx.Method(), ctx.Path(), err.Error())
 		ctx.WriteStatus(404)
 		return
 	}
