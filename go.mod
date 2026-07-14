@@ -11,7 +11,7 @@ require (
 	github.com/tinywasm/js v0.0.4
 	github.com/tinywasm/jsvalue v0.0.15
 	github.com/tinywasm/orm v0.9.27
-	github.com/tinywasm/server v0.2.28
+	github.com/tinywasm/server v0.2.30
 	github.com/tinywasm/sqlt v0.0.7
 	github.com/tinywasm/tinygo v0.0.11
 	lukechampine.com/blake3 v1.4.1
@@ -40,9 +40,9 @@ require (
 	github.com/tinywasm/gorun v0.0.24 // indirect
 	github.com/tinywasm/html v0.0.6 // indirect
 	github.com/tinywasm/json v0.5.11 // indirect
-	github.com/tinywasm/mcp v0.1.20 // indirect
-	github.com/tinywasm/model v0.0.12 // indirect
-	github.com/tinywasm/router v0.1.7
+	github.com/tinywasm/mcp v0.1.22 // indirect
+	github.com/tinywasm/model v0.0.13
+	github.com/tinywasm/router v0.1.11
 	github.com/tinywasm/svg v0.1.3 // indirect
 	github.com/tinywasm/time v0.5.0 // indirect
 	github.com/tinywasm/unixid v0.2.23
