@@ -22,6 +22,7 @@ type fakeCtx struct {
 	headers map[string]string
 	status  int
 	written []byte
+	uid     string
 }
 
 func newCtx(method, path string, body []byte) *fakeCtx {
@@ -42,8 +43,12 @@ func (c *fakeCtx) WriteStatus(code int)      { c.status = code }
 func (c *fakeCtx) SetValue(k string, v any)  {}
 func (c *fakeCtx) Value(k string) any        { return nil }
 func (c *fakeCtx) SetCookie(router.Cookie)   {}
-func (c *fakeCtx) SetUserID(id string)       {}
-func (c *fakeCtx) UserID() string            { return "" }
+
+// SetUserID and UserID record the identity for real. They used to be an empty setter and a
+// hardcoded "": a fake that could not hold a caller, so the gate could never see one. That is
+// why this suite stayed green while every upload answered 403 in production.
+func (c *fakeCtx) SetUserID(id string) { c.uid = id }
+func (c *fakeCtx) UserID() string      { return c.uid }
 func (c *fakeCtx) Cookie(string) (router.Cookie, bool) {
 	return router.Cookie{}, false
 }

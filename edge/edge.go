@@ -8,6 +8,7 @@ import (
 	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/goflare/log"
 	"github.com/tinywasm/goflare/workers"
+	"github.com/tinywasm/model"
 	"github.com/tinywasm/router"
 )
 
@@ -128,24 +129,55 @@ type wasmRoute struct {
 	h    router.HandlerFunc
 }
 
-func (r *wasmRoute) Requires(resource, action string) router.Route {
+func (r *wasmRoute) Requires(resource model.Resource, action model.Action) router.Route {
+	r.info.Access = model.AccessGuarded
 	r.info.Resource = resource
 	r.info.Action = action
 	return r
 }
 
-func (r *wasmRoute) Public() router.Route {
-	r.info.Public = true
+func (r *wasmRoute) Authenticated() router.Route {
+	r.info.Access = model.AccessAuthenticated
 	return r
 }
 
+func (r *wasmRoute) Public() router.Route {
+	r.info.Access = model.AccessPublic
+	return r
+}
+
+// Config declares WHO the caller is and WHAT they may do. The library supplies the
+// mechanism; the policy belongs to the app.
+//
+// The zero value is legal — an app with no authentication — and its public routes work.
+// What it cannot do is mount a guarded route without saying who authorizes it: Serve
+// refuses to start on that contradiction, instead of answering 403 forever in silence.
+type Config struct {
+	// Authn establishes identity. It runs BEFORE the access gate, and that ordering is the
+	// whole point: a gate that runs first can never be satisfied, so every guarded route
+	// becomes a permanent 403. That is exactly the bug this replaced — it made the file
+	// upload API unusable in production while the tests stayed green.
+	//
+	// It reads the request (cookie, header, token) and calls ctx.SetUserID. Anonymous ("")
+	// is a legal outcome, not an error.
+	Authn router.Middleware
+
+	// Authorize answers whether that identity holds a permission. nil DENIES: the absence
+	// of an answer is not permission.
+	Authorize model.Authorizer
+}
+
 type wasmRouter struct {
+	cfg         Config
 	routes      []*wasmRoute
 	middlewares []router.Middleware
 }
 
-func NewRouter() router.Router {
-	return &wasmRouter{}
+// NewRouter builds the edge router. It takes a Config on purpose: the no-argument version
+// could not authenticate anybody, which made every guarded route unreachable. An app with
+// no auth passes edge.Config{} — explicitly.
+func NewRouter(cfg Config) router.Router {
+	return &wasmRouter{cfg: cfg}
 }
 
 func (r *wasmRouter) Get(path string, h router.HandlerFunc) router.Route {
@@ -175,7 +207,7 @@ func (r *wasmRouter) Handle(method, path string, h router.HandlerFunc) router.Ro
 // PublicAsset registra UNA ruta que sirve UN archivo al navegador.
 func (r *wasmRouter) PublicAsset(path string, h router.HandlerFunc) {
 	route := &wasmRoute{
-		info: router.RouteInfo{Method: "GET", Path: path, Public: true},
+		info: router.RouteInfo{Method: "GET", Path: path, Access: model.AccessPublic},
 		h:    h,
 	}
 	r.routes = append(r.routes, route)
@@ -184,7 +216,7 @@ func (r *wasmRouter) PublicAsset(path string, h router.HandlerFunc) {
 // PublicDir sirve un directorio bajo un prefijo. Mismo contrato.
 func (r *wasmRouter) PublicDir(prefix string, dir string) {
 	route := &wasmRoute{
-		info: router.RouteInfo{Method: "GET", Path: prefix, Public: true, Dir: dir},
+		info: router.RouteInfo{Method: "GET", Path: prefix, Access: model.AccessPublic, Dir: dir},
 	}
 	r.routes = append(r.routes, route)
 }
@@ -209,82 +241,172 @@ func (r *wasmRouter) Socket(path string, h router.SocketFunc) router.Route {
 	panic("Socket not supported in this runtime")
 }
 
+// pathMatches reports whether pathname is served by pattern. A pattern ending in "/" matches
+// by prefix (that is how files.Store hangs a generated key off /api/files/); anything else is
+// an exact match.
+func pathMatches(pattern, pathname string) bool {
+	if pattern == "" {
+		return false
+	}
+	if pattern[len(pattern)-1] != '/' {
+		return pathname == pattern
+	}
+	if len(pathname) < len(pattern) {
+		return false
+	}
+	for i := 0; i < len(pattern); i++ {
+		if pathname[i] != pattern[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// match finds the route for a method+path. The longest matching path wins, so a specific
+// route beats a prefix one. A route registered with an empty method matches any method.
+//
+// The second result is the status to answer when nothing matched: 405 when the path exists
+// but not for this method, 404 when it does not exist at all.
+func (r *wasmRouter) match(method, pathname string) (*wasmRoute, int) {
+	var best *wasmRoute
+	pathExists := false
+
+	for _, rt := range r.routes {
+		if !pathMatches(rt.info.Path, pathname) {
+			continue
+		}
+		pathExists = true
+		if rt.info.Method != "" && rt.info.Method != method {
+			continue
+		}
+		if best == nil || len(rt.info.Path) > len(best.info.Path) {
+			best = rt
+		}
+	}
+
+	if best != nil {
+		return best, 200
+	}
+	if pathExists {
+		return nil, 405
+	}
+	return nil, 404
+}
+
+// allows is the access gate. The zero value of Access is AccessGuarded, so a route that
+// declares nothing is unreachable — and validateRoutes already refused to start on it.
+func (r *wasmRouter) allows(info router.RouteInfo, userID string) (bool, string) {
+	switch info.Access {
+	case model.AccessPublic:
+		return true, ""
+	case model.AccessAuthenticated:
+		if userID == "" {
+			return false, "anonymous caller on a route that requires an identity"
+		}
+		return true, ""
+	default: // model.AccessGuarded
+		if userID == "" {
+			return false, "anonymous caller on a route requiring " + string(info.Resource)
+		}
+		// model.Allowed denies when Authorize is nil: the absence of an answer is not
+		// permission.
+		if !model.Allowed(r.cfg.Authorize, userID, info.Resource, info.Action) {
+			return false, "identity lacks " + info.Action.String() + " on " + string(info.Resource)
+		}
+		return true, ""
+	}
+}
+
+// Validate refuses to start on a contradiction. Each of these denies EVERY caller, forever,
+// on a route that LOOKS protected — and the only way to discover that is a 403 in production,
+// which is exactly how the file upload API shipped unusable.
+//
+// It panics rather than returning an error: there is nobody to hand an error to at the top of
+// a Worker, and goflare recovers and logs panics. Loud beats silent.
+func Validate(r router.Router) {
+	wr := r.(*wasmRouter)
+	for _, rt := range wr.routes {
+		if rt.info.Access != model.AccessGuarded {
+			continue
+		}
+		if rt.info.Resource == "" {
+			panic("edge: route " + rt.info.Method + " " + rt.info.Path +
+				" is guarded but declares no resource: it is unreachable")
+		}
+		if wr.cfg.Authorize == nil {
+			panic("edge: route " + rt.info.Method + " " + rt.info.Path +
+				" requires resource \"" + string(rt.info.Resource) +
+				"\" but no Authorize is configured: it would deny every caller")
+		}
+		if wr.cfg.Authn == nil {
+			panic("edge: route " + rt.info.Method + " " + rt.info.Path +
+				" needs an identity but no Authn is configured: no caller can ever be authorized")
+		}
+	}
+}
+
 func Serve(r router.Router) {
 	wr := r.(*wasmRouter)
+
+	// Loudly, at startup — never a silent 403 in production.
+	Validate(wr)
+
 	workers.Handle(func(res *workers.Response, req *workers.Request) {
 		pathname := js.Global().Get("URL").New(req.URL).Get("pathname").String()
-
-		ctx := &wasmContext{req: req, res: res, path: pathname}
-
-		var bestMatch *wasmRoute
-		for _, rt := range wr.routes {
-			if rt.info.Method != "" && rt.info.Method != req.Method {
-				continue
-			}
-
-			matched := false
-			pattern := rt.info.Path
-			if pattern != "" && pattern[len(pattern)-1] == '/' {
-				// Prefix match
-				if len(pathname) >= len(pattern) {
-					match := true
-					for i := 0; i < len(pattern); i++ {
-						if pathname[i] != pattern[i] {
-							match = false
-							break
-						}
-					}
-					if match {
-						matched = true
-					}
-				}
-			} else {
-				// Exact match
-				if pathname == pattern {
-					matched = true
-				}
-			}
-
-			if matched {
-				if bestMatch == nil || len(rt.info.Path) > len(bestMatch.info.Path) {
-					bestMatch = rt
-				}
-			}
-		}
-
-		if bestMatch != nil {
-			// RBAC check
-			if !bestMatch.info.Public && bestMatch.info.Resource == "" && ctx.UserID() == "" {
-				// The silent version of this 403 is why PublicAsset exists: a route that
-				// forgot to declare itself public serves a blank page and says nothing.
-				log.Reject(403, req.Method, pathname, "route is private by default: it declares neither Public() nor Requires()")
-				res.WriteHeader(403)
-				res.Write([]byte("Forbidden: Private by default"))
-				return
-			}
-			// Note: if Resource is set, an actual authorizer would be needed.
-			// The plan says: "without marker and without identity -> 403"
-			// If Requires() was called, it should also probably check UserID.
-			if bestMatch.info.Resource != "" && ctx.UserID() == "" {
-				log.Reject(403, req.Method, pathname, "anonymous caller on a route requiring "+bestMatch.info.Resource)
-				res.WriteHeader(403)
-				res.Write([]byte("Forbidden: Identity required"))
-				return
-			}
-
-			h := bestMatch.h
-			// Apply middlewares in reverse order
-			for i := len(wr.middlewares) - 1; i >= 0; i-- {
-				h = wr.middlewares[i](h)
-			}
-			h(ctx)
-			return
-		}
-
-		log.Reject(404, req.Method, pathname, "no route matches")
-		res.WriteHeader(404)
-		res.Write([]byte("Not Found"))
+		Dispatch(wr, &wasmContext{req: req, res: res, path: pathname})
 	})
+}
+
+// Dispatch drives ONE request through the full pipeline: identity, access gate, middleware,
+// handler. It speaks only router.Context, so the pipeline that runs in production is the
+// same one a test can drive — with no Cloudflare runtime and no js.Global() in sight.
+//
+// That is not a convenience: the previous tests called the matched handler DIRECTLY, past
+// the gate, which is why they stayed green while every guarded route answered 403 in
+// production. A pipeline you cannot drive is a pipeline nobody tests.
+func Dispatch(r router.Router, ctx router.Context) {
+	wr := r.(*wasmRouter)
+
+	// The gate decides with the identity Authn established. Run these the other way round —
+	// as this router used to — and no caller can EVER be authorized, on any route: the gate
+	// reads a UserID that nothing has written yet.
+	gate := func(c router.Context) { wr.gateAndServe(c) }
+	if wr.cfg.Authn != nil {
+		gate = wr.cfg.Authn(gate)
+	}
+	gate(ctx)
+}
+
+func (r *wasmRouter) gateAndServe(ctx router.Context) {
+	method, pathname := ctx.Method(), ctx.Path()
+
+	route, status := r.match(method, pathname)
+	if route == nil {
+		reason := "no route matches"
+		if status == 405 {
+			reason = "the path exists but not for this method"
+		}
+		log.Reject(status, method, pathname, reason)
+		ctx.WriteStatus(status)
+		ctx.Write([]byte(fmt.Convert(status).String()))
+		return
+	}
+
+	if ok, why := r.allows(route.info, ctx.UserID()); !ok {
+		log.Reject(403, method, pathname, why)
+		ctx.WriteStatus(403)
+		ctx.Write([]byte("Forbidden"))
+		return
+	}
+
+	// Middleware runs BEHIND the gate: a rejected request must not execute the consumer's
+	// logic — decoding a body or hitting a database for a caller about to get a 403 is work
+	// (and attack surface) handed to somebody already denied.
+	h := route.h
+	for i := len(r.middlewares) - 1; i >= 0; i-- {
+		h = r.middlewares[i](h)
+	}
+	h(ctx)
 }
 
 var _ router.Router = (*wasmRouter)(nil)

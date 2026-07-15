@@ -12,6 +12,7 @@ import (
 	"github.com/tinywasm/filetype"
 	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/goflare/log"
+	"github.com/tinywasm/model"
 	"github.com/tinywasm/router"
 	"github.com/tinywasm/unixid"
 )
@@ -76,10 +77,24 @@ func (s *Store) MaxSize(n int) *Store {
 	return s
 }
 
-// Mount registers both routes: uploading requires the "files"/"write" permission,
-// serving is public because an <img src> cannot send headers.
+// Resource is the permission an app must grant to let a caller upload. It is exported
+// because the app is the one that decides WHO holds it: the library states the requirement,
+// the consumer's Authorizer answers it.
+const Resource model.Resource = "files"
+
+// Action is what uploading does: it CREATES an object under a key the server generates.
+// It is not "write" — the action vocabulary is closed CRUD, and an invented verb is a
+// permission nothing enforces.
+const Action = model.Create
+
+// Mount registers both routes: uploading requires the files/Create permission, serving is
+// public because an <img src> cannot send headers.
+//
+// The upload is guarded on purpose. Do NOT make it public to "fix" a 403: a write-open
+// bucket is a spam form. If uploads are rejected, the app has not told the router who the
+// caller is (edge.Config.Authn) or who may write (edge.Config.Authorize).
 func (s *Store) Mount(r router.Router) {
-	r.Put(s.prefix, s.upload).Requires("files", "write")
+	r.Put(s.prefix, s.upload).Requires(Resource, Action)
 	r.Get(s.prefix, s.serve).Public()
 }
 

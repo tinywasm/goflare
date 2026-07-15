@@ -1,16 +1,20 @@
+---
+PLAN: "— cola de ejecución de `goflare`"
+---
 > Este plan se despacha vía el flujo CodeJob. Ver skill: agents-workflow.
 > Orquestado por `tinywasm/docs/ROUTER_ADAPTER_MASTER_PLAN.md` — **Fase 3 (propagación)**.
+> La Etapa 3 la orquesta `tinywasm/docs/ROUTER_CONFORMANCE_MASTER_PLAN.md` — **Fase C**.
 
-# PLAN — cola de ejecución de `goflare`
 
-> **La cola está vacía: no hay nada que despachar.** Las dos etapas están aplicadas en el
-> árbol. Este archivo queda como índice histórico. Antes de añadir una etapa nueva, lee
-> "Estado actual" más abajo.
+> **Hay una etapa pendiente: la 3.** Las etapas 1 y 2 están aplicadas y publicadas
+> (v0.4.1), pero la 2 **no funciona en producción** — ver "Estado actual".
 
 | Orden | Plan | Estado | Asunto |
 |-------|------|--------|--------|
 | 1 | [PLAN_STAGE_1_ROUTER.md](PLAN_STAGE_1_ROUTER.md) | ✅ **COMPLETADA** (PR #18, mergeado) | `goflare` deja de ser dueño del contrato de enrutado y pasa a implementarlo: borra el fork `goflare/router`, reconstruye `devserver/` sobre `server/httpd`, renombra `pages/` → `edge/` y endurece la detección de modo. |
-| 2 | [PLAN_STAGE_2_FILES.md](PLAN_STAGE_2_FILES.md) | ✅ **COMPLETADA** (PR #19) | Subir y servir archivos en el borde: `PublicAsset`/`PublicDir`, cuerpo binario y perezoso en `workers/request.go`, bucket R2 (`r2/`) y el helper de subida (`files/`). |
+| 2 | [PLAN_STAGE_2_FILES.md](PLAN_STAGE_2_FILES.md) | ⚠️ **APLICADA, PERO INSERVIBLE EN PRODUCCIÓN** | Subir y servir archivos en el borde: `PublicAsset`/`PublicDir`, cuerpo binario y perezoso en `workers/request.go`, bucket R2 (`r2/`) y el helper de subida (`files/`). **La subida responde 403 a todo el mundo** — lo arregla la Etapa 3. |
+| 3 | [PLAN_STAGE_3_EDGE_ACCESS.md](PLAN_STAGE_3_EDGE_ACCESS.md) | ✅ **IMPLEMENTADA** (sin publicar) | `edge` adopta el contrato `model.Access` con asientos `Authn`/`Authorize`, ejecuta la verja **después** de establecer identidad, y demuestra conformidad. Sin esto, toda ruta con `.Requires()` es un 403 eterno. **Rompe API**: `edge.NewRouter()` pasa a tomar `edge.Config`. |
+| 4 | [PLAN_STAGE_4_FILES_PER_OWNER.md](PLAN_STAGE_4_FILES_PER_OWNER.md) | ☐ **PENDIENTE** | `files.Store.PerOwner()`: la clave es la identidad del que sube → **un archivo por usuario, reemplazado** al subir otro. Hoy cada subida crea un objeto nuevo y deja basura que nadie borra. Orquestado por `DEMO_FOUR_APIS_MASTER_PLAN.md` (Fase F). |
 
 ## Estado actual
 

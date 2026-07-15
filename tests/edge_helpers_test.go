@@ -6,26 +6,37 @@ import (
 	"syscall/js"
 	"testing"
 
+	"github.com/tinywasm/model"
 	"github.com/tinywasm/router"
 )
 
-// captureRoute records the permissions a handler was registered with.
+// captureRoute records the access a handler was registered with.
 type captureRoute struct {
 	public   bool
 	requires bool
+	resource model.Resource
+	action   model.Action
 }
 
-func (r *captureRoute) Requires(resource, action string) router.Route {
+func (r *captureRoute) Requires(resource model.Resource, action model.Action) router.Route {
 	r.requires = true
+	r.resource = resource
+	r.action = action
 	return r
 }
+func (r *captureRoute) Authenticated() router.Route { return r }
 func (r *captureRoute) Public() router.Route {
 	r.public = true
 	return r
 }
 
-// captureRouter is a router.Router that keeps the handlers instead of serving them,
-// so a test can call one directly and inspect how it was registered.
+// captureRouter keeps the handlers instead of serving them, so a test can call ONE directly
+// and unit-test what it does: magic-byte validation, key generation, the binary round trip.
+//
+// It does NOT go through the access gate, and that is a deliberate limit, not a shortcut —
+// it is why it may never be the only thing testing this package. Trusting it for access
+// control is how the upload shipped as a permanent 403 with a green suite. The gate is the
+// job of TestEdgeConformance, which drives the real pipeline.
 type captureRouter struct {
 	get, put router.HandlerFunc
 	getRoute *captureRoute
