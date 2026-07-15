@@ -55,8 +55,8 @@ github.com/tinywasm/jsvalue v0.0.15 h1:RbdqbytQD8ASxm3QGXHdXbhos/uP1E7gxV4SWpLSG
 github.com/tinywasm/jsvalue v0.0.15/go.mod h1:LKUZAJYaV4Kjq/BLej2kkM9AKOfLgNrZ1W6Xwz/CdQk=
 github.com/tinywasm/mcp v0.1.22 h1:0LUy/+RN14/PAAyBxMBEmkVaIF/3w/JUP5knk71SWh4=
 github.com/tinywasm/mcp v0.1.22/go.mod h1:GYN5SfUgKztQfF0SMpU9RBdzKVhQ8q7uhS54FLhw3OM=
-github.com/tinywasm/model v0.0.14 h1:Uctb34Xj0+rPWRqyI8/dHub0vyey8All1Ft+XBMXJKs=
-github.com/tinywasm/model v0.0.14/go.mod h1:wkYZLW6CWVrlx5TiLEBL71KgDxhjUcFtY3KXZKpkCXA=
+github.com/tinywasm/model v0.0.15 h1:EpDMgfTq83PzSBVkDU2Ug6B1XRvsk0Ki+scJSf9chfU=
+github.com/tinywasm/model v0.0.15/go.mod h1:wkYZLW6CWVrlx5TiLEBL71KgDxhjUcFtY3KXZKpkCXA=
 github.com/tinywasm/orm v0.9.28 h1:/VhIq7rfkwY7N9VrSZsYNlLQm7PSi0jmudzix2ut8Os=
 github.com/tinywasm/orm v0.9.28/go.mod h1:EJvLFeMXmdV+i0q6pFycYjhivun+5gHkhPjWu9UM2OQ=
 github.com/tinywasm/router v0.1.11 h1:oXNXzg9tTdtCFbJTmzGXv3oIksDvlsUkNb55US8XVHg=
