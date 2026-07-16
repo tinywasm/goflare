@@ -125,7 +125,7 @@ func (s *Store) upload(ctx router.Context) {
 	}
 
 	// The key comes from the server. The client's filename is text it chose.
-	key := s.ids.GetNewID() + t.Ext
+	key := s.ids.NewID() + t.Ext
 
 	if err := s.bucket.Put(key, data, t.MIME); err != nil {
 		log.Fail(502, ctx.Method(), ctx.Path(), err)

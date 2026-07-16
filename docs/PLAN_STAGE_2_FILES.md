@@ -186,7 +186,7 @@ El nombre que manda el cliente es tan poco fiable como su `Content-Type`: una cl
 `../` o con barras te ensucia el bucket.
 
 - **Genera la clave en el servidor** con `github.com/tinywasm/unixid` (`NewUnixID()` →
-  `GetNewID()`), que **ya está en el grafo de dependencias**, tiene variante `//go:build
+  `NewID()`), que **ya está en el grafo de dependencias**, tiene variante `//go:build
   wasm` y solo depende de `tinywasm/fmt` y `tinywasm/time`. Coste de tamaño: despreciable.
 - La clave final es `<id><ext>`, donde `ext` **sale del sniffing** del paso 2 — nunca del
   nombre que mandó el cliente.
@@ -327,7 +327,7 @@ r.Put(filesPrefix, func(ctx router.Context) {
 	}
 
 	// 3. La clave la genera el servidor. Nunca el nombre que mandó el cliente.
-	key := id.GetNewID() + t.Ext
+	key := id.NewID() + t.Ext
 
 	if err := bucket.Put(key, data, t.MIME); err != nil {
 		ctx.WriteStatus(502)

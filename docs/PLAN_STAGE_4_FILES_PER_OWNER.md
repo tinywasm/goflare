@@ -20,7 +20,7 @@ Es el caso más común que existe, y hoy `files.Store` **no lo permite**: la cla
 
 ```go
 // The key comes from the server. The client's filename is text it chose.
-key := s.ids.GetNewID() + t.Ext
+key := s.ids.NewID() + t.Ext
 ```
 
 Diez subidas del mismo usuario = **diez objetos** en el bucket, y nueve basura que nadie borra
@@ -54,7 +54,7 @@ func (s *Store) PerOwner() *Store {
 En `upload`, la clave pasa a ser:
 
 ```go
-key := s.ids.GetNewID() + t.Ext
+key := s.ids.NewID() + t.Ext
 if s.perOwner {
 	// The identity is guaranteed non-empty: the gate rejected the anonymous caller before
 	// this handler ever ran.
