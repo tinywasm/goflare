@@ -5,6 +5,7 @@ package d1
 import (
 	"syscall/js"
 
+	"github.com/tinywasm/await"
 	"github.com/tinywasm/jsvalue"
 	"github.com/tinywasm/orm"
 	"github.com/tinywasm/sqlt"
@@ -23,7 +24,7 @@ func NewEdge(bindingName string) (*orm.DB, error) {
 
 func (a *adapter) Exec(query string, args ...any) error {
 	stmt := a.dbObj.Call("prepare", query)
-	_, err := jsvalue.AwaitPromise(bindArgs(stmt, args).Call("run"))
+	_, err := await.Promise(bindArgs(stmt, args).Call("run"))
 	return err
 }
 
@@ -31,7 +32,7 @@ func (a *adapter) QueryRow(query string, args ...any) orm.Scanner {
 	stmt := a.dbObj.Call("prepare", query)
 	opts := js.Global().Get("Object").New()
 	opts.Set("columnNames", true)
-	arr, err := jsvalue.AwaitPromise(bindArgs(stmt, args).Call("raw", opts))
+	arr, err := await.Promise(bindArgs(stmt, args).Call("raw", opts))
 	if err != nil {
 		return &errScanner{err}
 	}
@@ -45,7 +46,7 @@ func (a *adapter) Query(query string, args ...any) (orm.Rows, error) {
 	stmt := a.dbObj.Call("prepare", query)
 	opts := js.Global().Get("Object").New()
 	opts.Set("columnNames", true)
-	arr, err := jsvalue.AwaitPromise(bindArgs(stmt, args).Call("raw", opts))
+	arr, err := await.Promise(bindArgs(stmt, args).Call("raw", opts))
 	if err != nil {
 		return nil, err
 	}

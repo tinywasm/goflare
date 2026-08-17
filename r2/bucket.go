@@ -5,8 +5,8 @@ package r2
 import (
 	"syscall/js"
 
+	"github.com/tinywasm/await"
 	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/jsvalue"
 )
 
 type Bucket struct {
@@ -33,14 +33,14 @@ func (b *Bucket) Put(key string, data []byte, contentType string) error {
 		opts.Set("httpMetadata", httpMetadata)
 	}
 
-	if _, err := jsvalue.AwaitPromise(b.obj.Call("put", key, ua, opts)); err != nil {
+	if _, err := await.Promise(b.obj.Call("put", key, ua, opts)); err != nil {
 		return fmt.Errf("r2: put %s: %s", key, err.Error())
 	}
 	return nil
 }
 
 func (b *Bucket) Get(key string) ([]byte, string, error) {
-	obj, err := jsvalue.AwaitPromise(b.obj.Call("get", key))
+	obj, err := await.Promise(b.obj.Call("get", key))
 	if err != nil {
 		return nil, "", fmt.Errf("r2: get %s: %s", key, err.Error())
 	}
@@ -61,7 +61,7 @@ func (b *Bucket) Get(key string) ([]byte, string, error) {
 	// We need to read the entire stream. Easiest way in this environment:
 	// new Response(body).arrayBuffer()
 	resp := js.Global().Get("Response").New(jsBody)
-	arrayBuffer, err := jsvalue.AwaitPromise(resp.Call("arrayBuffer"))
+	arrayBuffer, err := await.Promise(resp.Call("arrayBuffer"))
 	if err != nil {
 		return nil, "", fmt.Errf("r2: read body of %s: %s", key, err.Error())
 	}
@@ -84,7 +84,7 @@ func (b *Bucket) Get(key string) ([]byte, string, error) {
 }
 
 func (b *Bucket) Delete(key string) error {
-	if _, err := jsvalue.AwaitPromise(b.obj.Call("delete", key)); err != nil {
+	if _, err := await.Promise(b.obj.Call("delete", key)); err != nil {
 		return fmt.Errf("r2: delete %s: %s", key, err.Error())
 	}
 	return nil
@@ -102,7 +102,7 @@ func (b *Bucket) List(prefix string) ([]ObjectInfo, error) {
 		opts.Set("prefix", prefix)
 	}
 
-	res, err := jsvalue.AwaitPromise(b.obj.Call("list", opts))
+	res, err := await.Promise(b.obj.Call("list", opts))
 	if err != nil {
 		return nil, fmt.Errf("r2: list prefix %s: %s", prefix, err.Error())
 	}
