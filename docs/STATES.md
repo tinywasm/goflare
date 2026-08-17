@@ -67,8 +67,7 @@ All direct dependencies are modern and actively maintained:
 | Module | Purpose |
 |---|---|
 | `github.com/tdewolff/minify/v2` | JS/CSS minification |
-| `github.com/tinywasm/assetmin` | `script.js` / `style.css` generation |
-| `github.com/tinywasm/client` | WASM compilation (TinyGo wrapper) |
+| `github.com/tinywasm/sitec` | `script.js` / `style.css` asset generation and WASM compilation |
 
 **Requirements:** Go 1.25.2+.
 

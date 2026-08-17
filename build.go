@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/tinywasm/sitec"
 )
 
 // Build orchestrates the build pipeline as a method.
@@ -100,9 +102,8 @@ func checkWasmSize(path string) error {
 // Both outputs end up in the project tree (no .build/ staging visible to the dev)
 // so the dev commits them and CF Git Integration deploys them as-is (D8).
 //
-// Implementation note: tinywasm/client caches the storage path at UseDiskStorage()
-// time, so we let it compile to its configured OutputDir (.build/) and then move
-// edge.wasm into functions/. Cheaper than restructuring the storage init.
+// Implementation note: sitec.WasmBuilder compiles to memory; we write edge.wasm into staging
+// and then move edge.wasm into functions/.
 func (g *Goflare) buildPagesFunctions() error {
 	if _, err := os.Stat(g.Config.Entry); os.IsNotExist(err) {
 		return fmt.Errorf("entry path does not exist: %s", g.Config.Entry)
@@ -197,20 +198,30 @@ func (g *Goflare) buildPages() error {
 	// 2. Compile frontend WASM if web/client.go exists
 	frontEntry := filepath.Join("web", "client.go")
 	if _, err := os.Stat(frontEntry); err == nil {
-		if g.browserCompiler == nil {
-			return fmt.Errorf("frontend compiler not initialized (browserCompiler is nil)")
-		}
 		g.Logger("compiling frontend WASM: web/client.go →", g.Config.PublicDir)
-		if err := g.browserCompiler.Compile(); err != nil {
+		useStdlib := g.Config.CompilerMode == "L"
+		frontBuilder := sitec.NewWasmBuilder(useStdlib, sitec.WasmBuildOptions{})
+		frontSourceDir := filepath.Dir(g.Config.PublicDir)
+		out, err := frontBuilder.Build(frontSourceDir)
+		if err != nil {
 			return fmt.Errorf("frontend WASM compilation failed: %w", err)
+		}
+
+		outPath := filepath.Join(g.Config.PublicDir, out.Filename)
+		if err := os.WriteFile(outPath, out.Binary, 0644); err != nil {
+			return fmt.Errorf("failed to write frontend WASM binary: %w", err)
+		}
+
+		if g.assetMin != nil {
+			g.assetMin.SetWasm(out.Filename, out.Runtime)
 		}
 	}
 
-	// 3. Generate script.js + style.css via assetmin
+	// 3. Generate script.js + style.css via sitec
 	if g.assetMin != nil {
 		g.Logger("generating assets: script.js, style.css →", g.Config.PublicDir)
 		if err := g.assetMin.FlushToDisk(); err != nil {
-			return fmt.Errorf("assetmin flush failed: %w", err)
+			return fmt.Errorf("sitec asset flush failed: %w", err)
 		}
 	}
 

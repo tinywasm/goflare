@@ -35,11 +35,12 @@ type Bucket interface {
 
 // Store registers the upload and serve handlers for one bucket under one prefix.
 type Store struct {
-	bucket  Bucket
-	ids     *unixid.UnixID
-	allow   filetype.Allowlist
-	prefix  string
-	maxSize int
+	bucket   Bucket
+	ids      *unixid.UnixID
+	allow    filetype.Allowlist
+	prefix   string
+	maxSize  int
+	perOwner bool
 }
 
 // New builds a Store on the safe defaults: raster images only, 10 MiB.
@@ -74,6 +75,21 @@ func (s *Store) Allow(a filetype.Allowlist) *Store {
 // MaxSize caps the upload size in bytes.
 func (s *Store) MaxSize(n int) *Store {
 	s.maxSize = n
+	return s
+}
+
+// PerOwner keys the object by its uploader: ONE object per identity, replaced whenever that
+// identity uploads again. The natural shape of an avatar, a profile photo, a signature.
+//
+// The key is the caller's UserID and nothing else — no extension. The type is NOT lost: it
+// was deduced from the bytes and travels in the object's metadata, which is exactly where
+// serve() already reads it from. An extension would defeat the point: uploading a .png and
+// then a .jpg would produce TWO keys, and the first would be orphaned forever.
+//
+// It is only reachable on a guarded route (upload already Requires files/Create), so the
+// identity is never empty by construction.
+func (s *Store) PerOwner() *Store {
+	s.perOwner = true
 	return s
 }
 
@@ -126,6 +142,9 @@ func (s *Store) upload(ctx router.Context) {
 
 	// The key comes from the server. The client's filename is text it chose.
 	key := s.ids.GetNewID() + t.Ext
+	if s.perOwner {
+		key = ctx.UserID()
+	}
 
 	if err := s.bucket.Put(key, data, t.MIME); err != nil {
 		log.Fail(502, ctx.Method(), ctx.Path(), err)
