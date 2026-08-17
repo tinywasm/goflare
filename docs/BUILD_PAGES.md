@@ -8,7 +8,7 @@ GoFlare will automatically detect the public directory if `web/public/` exists (
 
 1. **Verify PUBLIC_DIR:** Checks that the public directory exists.
 2. **Compile Frontend WASM:** If `web/client.go` exists, it compiles it to `PUBLIC_DIR/client.wasm`.
-3. **Generate Assets:** Uses `assetmin` to generate `script.js` and `style.css` in `PUBLIC_DIR`.
+3. **Generate Assets:** Uses `sitec` to generate `script.js` and `style.css` in `PUBLIC_DIR`.
 
 ## Deployment
 

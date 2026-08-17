@@ -40,7 +40,7 @@ GoFlare is a Go library and CLI that bridges the gap between Go source code and 
 - **Mode Inference (`mode.go`):** `inferMode()` reads `edge/main.go` and inspects imports — `tinywasm/goflare/edge` → Pages Functions; `tinywasm/goflare/workers` → Workers; no entry but PublicDir → static Pages. `.env` does NOT carry a `MODE` variable; the code is the source of truth.
 - **Worker Build:** Produces `.build/edge.js` (bundled) and `.build/edge.wasm`.
 - **Pages Functions Build:** Produces `functions/[[path]].mjs` (catch-all, exports `onRequest`) and `functions/edge.wasm`. Outputs go directly to the project tree (no `.build/` staging) so they can be committed and served via CF Git Integration.
-- **Static Pages Build:** Copies/delegates static assets (frontend WASM produced by the tinywasm framework, assetmin for JS/CSS).
+- **Static Pages Build:** Copies/delegates static assets (frontend WASM produced by the tinywasm framework, sitec for JS/CSS).
 - **Orchestration:** `Build()` dispatches to `buildWorker` / `buildPagesFunctions` / `buildPages` based on the inferred mode.
 
 ### 4. Authentication (`auth.go`)
