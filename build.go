@@ -76,13 +76,19 @@ func (g *Goflare) Build() error {
 	return nil
 }
 
-// maxWasmSize is the Cloudflare Workers/Pages Free limit for the WASM binary.
-// https://developers.cloudflare.com/workers/platform/limits/#worker-size
-const maxWasmSize = 1 * 1024 * 1024 // 1 MiB
+const (
+	// maxWasmSize is the Cloudflare Workers/Pages Free limit for the WASM binary.
+	// https://developers.cloudflare.com/workers/platform/limits/#worker-size
+	maxWasmSize = 1 * 1024 * 1024 // 1 MiB
 
-// CompilerModeStdlib compila el frontend con el Go estandar en vez de TinyGo:
-// binario grande, compilacion rapida, sin minificar. Es el modo de desarrollo.
-const CompilerModeStdlib = "L"
+	// CompilerModeStdlib compila el frontend con el Go estandar en vez de TinyGo:
+	// binario grande, compilacion rapida, sin minificar. Es el modo de desarrollo.
+	CompilerModeStdlib = "L"
+
+	// moduleRoot es el directorio desde el que corre goflare. Toda ruta de
+	// fuente del proyecto —edge/main.go, web/client.go— se resuelve desde aqui.
+	moduleRoot = "."
+)
 
 // siteMode traduce el modo de compilador de goflare al de sitec.
 func siteMode(compilerMode string) sitec.Mode {
@@ -91,12 +97,6 @@ func siteMode(compilerMode string) sitec.Mode {
 	}
 	return sitec.ModeRelease
 }
-
-const (
-	// moduleRoot es el directorio desde el que corre goflare. Toda ruta de
-	// fuente del proyecto —edge/main.go, web/client.go— se resuelve desde aqui.
-	moduleRoot = "."
-)
 
 func checkWasmSize(path string) error {
 	info, err := os.Stat(path)
