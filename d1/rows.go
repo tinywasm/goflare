@@ -7,7 +7,7 @@ import (
 
 	. "github.com/tinywasm/fmt"
 	"github.com/tinywasm/jsvalue"
-	"github.com/tinywasm/orm"
+	"github.com/tinywasm/storage"
 )
 
 type d1Rows struct {
@@ -79,4 +79,4 @@ func (s *rowScanner) Scan(dest ...any) error {
 }
 
 // compile-time check
-var _ orm.Rows = (*d1Rows)(nil)
+var _ storage.Rows = (*d1Rows)(nil)
