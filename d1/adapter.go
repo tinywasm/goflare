@@ -9,9 +9,13 @@ import (
 	"github.com/tinywasm/jsvalue"
 	"github.com/tinywasm/orm"
 	"github.com/tinywasm/sqlt"
+	"github.com/tinywasm/storage"
 )
 
-type adapter struct{ dbObj js.Value }
+type adapter struct {
+	dbObj js.Value
+	storage.Compiler
+}
 
 // NewEdge opens the named D1 binding (Cloudflare edge runtime) and returns an *orm.DB.
 func NewEdge(bindingName string) (*orm.DB, error) {
@@ -19,7 +23,7 @@ func NewEdge(bindingName string) (*orm.DB, error) {
 	if v.IsUndefined() || v.IsNull() {
 		return nil, ErrDatabaseNotFound
 	}
-	return orm.New(&adapter{dbObj: v}, sqlt.NewCompiler()), nil
+	return orm.New(&adapter{dbObj: v, Compiler: sqlt.NewCompiler()}), nil
 }
 
 func (a *adapter) Exec(query string, args ...any) error {
@@ -28,7 +32,7 @@ func (a *adapter) Exec(query string, args ...any) error {
 	return err
 }
 
-func (a *adapter) QueryRow(query string, args ...any) orm.Scanner {
+func (a *adapter) QueryRow(query string, args ...any) storage.Scanner {
 	stmt := a.dbObj.Call("prepare", query)
 	opts := js.Global().Get("Object").New()
 	opts.Set("columnNames", true)
@@ -42,7 +46,7 @@ func (a *adapter) QueryRow(query string, args ...any) orm.Scanner {
 	return &rowScanner{arr.Index(1)}
 }
 
-func (a *adapter) Query(query string, args ...any) (orm.Rows, error) {
+func (a *adapter) Query(query string, args ...any) (storage.Rows, error) {
 	stmt := a.dbObj.Call("prepare", query)
 	opts := js.Global().Get("Object").New()
 	opts.Set("columnNames", true)

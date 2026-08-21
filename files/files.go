@@ -141,7 +141,7 @@ func (s *Store) upload(ctx router.Context) {
 	}
 
 	// The key comes from the server. The client's filename is text it chose.
-	key := s.ids.GetNewID() + t.Ext
+	key := s.ids.NewID() + t.Ext
 	if s.perOwner {
 		key = ctx.UserID()
 	}
