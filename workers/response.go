@@ -3,7 +3,6 @@
 package workers
 
 import (
-	"bytes"
 	"syscall/js"
 )
 
@@ -11,7 +10,7 @@ import (
 type Response struct {
 	status  int
 	headers map[string]string
-	buf     bytes.Buffer
+	buf     []byte
 }
 
 func newResponse() *Response {
@@ -29,10 +28,16 @@ func (w *Response) WriteHeader(code int) { w.status = code }
 func (w *Response) Header() map[string]string { return w.headers }
 
 // Write appends bytes to the response body.
-func (w *Response) Write(b []byte) (int, error) { return w.buf.Write(b) }
+func (w *Response) Write(b []byte) (int, error) {
+	w.buf = append(w.buf, b...)
+	return len(b), nil
+}
 
 // WriteString appends a string to the response body.
-func (w *Response) WriteString(s string) (int, error) { return w.buf.WriteString(s) }
+func (w *Response) WriteString(s string) (int, error) {
+	w.buf = append(w.buf, s...)
+	return len(s), nil
+}
 
 // build converts the Go response to a JS Response object.
 func (w *Response) build() js.Value {
@@ -47,7 +52,7 @@ func (w *Response) build() js.Value {
 
 	// Binary-safe body transfer: copy bytes to a Uint8Array
 	// rather than passing a string (which corrupts non-UTF8 data).
-	b := w.buf.Bytes()
+	b := w.buf
 	ua := js.Global().Get("Uint8Array").New(len(b))
 	js.CopyBytesToJS(ua, b)
 
