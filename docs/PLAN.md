@@ -2,6 +2,8 @@
 PLAN: "fix: goflare compila contra el ecosistema actual (router, orm, unixid, sqlt)"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 3282759745990873760
 ---
 
 > Este plan se despacha con el flujo CodeJob. Ver skill: agents-workflow.
