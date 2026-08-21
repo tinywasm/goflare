@@ -29,6 +29,9 @@ func (r *captureRoute) Public() router.Route {
 	r.public = true
 	return r
 }
+func (r *captureRoute) Accepts(args model.Fielder) router.Route {
+	return r
+}
 
 // captureRouter keeps the handlers instead of serving them, so a test can call ONE directly
 // and unit-test what it does: magic-byte validation, key generation, the binary round trip.
@@ -69,6 +72,9 @@ func (r *captureRouter) Stream(path string, h router.StreamFunc) router.Route {
 	return &captureRoute{}
 }
 func (r *captureRouter) Socket(path string, h router.SocketFunc) router.Route {
+	return &captureRoute{}
+}
+func (r *captureRouter) Op(id string) router.Route {
 	return &captureRoute{}
 }
 func (r *captureRouter) PublicAsset(path string, h router.HandlerFunc) {}

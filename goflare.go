@@ -6,12 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/tinywasm/assetmin"
-	"github.com/tinywasm/client"
 	"github.com/tinywasm/js"
+	"github.com/tinywasm/sitec"
 )
 
 type Config struct {
@@ -43,14 +41,13 @@ type Config struct {
 }
 
 type Goflare struct {
-	edgeCompiler    *client.WasmClient // Worker compiler (Entry)
-	browserCompiler *client.WasmClient // Frontend compiler (web/client.go) — nil if it doesn't apply
-	assetMin        *assetmin.AssetMin // generates script.js + style.css — nil if no PublicDir
-	Config          *Config            // exported so CLI can read it after LoadConfigFromEnv
-	log             func(message ...any)
-	BaseURL         string
-	stagingDir      string        // temporary directory for build artifacts
-	RetryBackoff    time.Duration // base duration for retries (defaults to 1s)
+	edgeBuilder  sitec.WasmBuilder // Worker compiler (Entry)
+	assetMin     *sitec.AssetMin   // generates script.js + style.css — nil if no PublicDir
+	Config       *Config           // exported so CLI can read it after LoadConfigFromEnv
+	log          func(message ...any)
+	BaseURL      string
+	stagingDir   string        // temporary directory for build artifacts
+	RetryBackoff time.Duration // base duration for retries (defaults to 1s)
 }
 
 func syncJSRuntime(mode string) {
@@ -74,63 +71,32 @@ func New(cfg *Config) *Goflare {
 		staging = cfg.OutputDir
 	}
 
-	edgeCompiler := client.New(&client.Config{
-		SourceDir: func() string {
-			if cfg.Entry != "" {
-				return cfg.Entry
-			}
-			return cfg.PublicDir
-		},
-		OutputDir: func() string { return staging },
-	})
-
-	// client.New defaults AppRootDir to ".", which causes filepath.Join(".", "/tmp/...")
-	// to produce a relative path ("tmp/...") instead of the absolute staging path.
-	// Clearing AppRootDir makes filepath.Join("", "/tmp/...") = "/tmp/..." (correct).
-	edgeCompiler.SetAppRootDir("")
-
-	edgeCompiler.UseDiskStorage()
 	// goflare ALWAYS compiles the edge with TinyGo in production mode.
 	// Cloudflare Workers/Pages enforce a 1 MiB wasm limit on Free plans,
 	// which standard Go (2-10 MB) cannot meet. The typed wrapper insulates
 	// goflare from any future change to the internal mode letter and
 	// persists the choice to disk storage so a stale previous mode does
 	// not silently override it.
-	edgeCompiler.UseProductionTinyGo()
-
-	// Edge functions use main.go (not client.go, which is the frontend default).
-	// OutputName "edge" makes TinyGo produce edge.wasm directly — no rename needed.
-	edgeCompiler.SetMainInputFile("main.go")
-	edgeCompiler.SetOutputName("edge")
+	edgeBuilder := sitec.NewWasmBuilder(false, sitec.WasmBuildOptions{
+		Entry:      "main.go",
+		OutputName: "edge",
+	})
 
 	g := &Goflare{
-		edgeCompiler: edgeCompiler,
+		edgeBuilder:  edgeBuilder,
 		Config:       cfg,
 		BaseURL:      cfAPIBase,
 		stagingDir:   staging,
 		RetryBackoff: time.Second,
 	}
 
-	// If PublicDir is present, create a client to compile web/client.go.
-	// SourceDir is derived from the parent of PublicDir (e.g., "web/public" -> "web").
-	// Do not call Change() here — it triggers immediate compilation.
-	// Use SetMode() which only updates the internal state.
 	if cfg.PublicDir != "" {
-		frontSourceDir := filepath.Dir(cfg.PublicDir)
-		browserCompiler := client.New(&client.Config{
-			SourceDir: func() string { return frontSourceDir },
-			OutputDir: func() string { return cfg.PublicDir },
-		})
-		browserCompiler.SetAppRootDir("")
-		browserCompiler.UseDiskStorage()
-		browserCompiler.SetMode(cfg.CompilerMode)
-		g.browserCompiler = browserCompiler
-
 		syncJSRuntime(cfg.CompilerMode)
 
-		g.assetMin = assetmin.NewAssetMin(&assetmin.Config{
+		g.assetMin = sitec.NewAssetMin(&sitec.Config{
 			OutputDir: cfg.PublicDir,
 		})
+		g.assetMin.SetFS(sitec.NewOsFS())
 		g.assetMin.UpdateSSRModule("tinywasm/js/bootstrap", "", []*js.Script{js.PageBootstrap()}, "", nil)
 	}
 
@@ -143,12 +109,6 @@ func (g *Goflare) StagingDir() string { return g.stagingDir }
 
 func (g *Goflare) SetLog(f func(message ...any)) {
 	g.log = f
-	if g.edgeCompiler != nil {
-		g.edgeCompiler.SetLog(f)
-	}
-	if g.browserCompiler != nil {
-		g.browserCompiler.SetLog(f)
-	}
 	if g.assetMin != nil {
 		g.assetMin.SetLog(f)
 	}
@@ -164,9 +124,6 @@ func (g *Goflare) Logger(messages ...any) {
 // mode: "L" (Large fast/Go), "M" (Medium TinyGo debug), "S" (Small TinyGo production)
 func (g *Goflare) SetCompilerMode(newValue string) {
 	g.Config.CompilerMode = newValue
-	if g.edgeCompiler != nil {
-		g.edgeCompiler.Change(newValue)
-	}
 }
 
 func (g *Goflare) Deploy() error {

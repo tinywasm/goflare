@@ -61,7 +61,7 @@ func TestBuild_OutputDirContainsOnlyWorkerArtifacts(t *testing.T) {
 }
 
 // TestBuild_PublicDirGetsGeneratedIndex verifies that Build() writes the
-// assetmin-generated index.html to PublicDir (overwriting any prior content).
+// sitec-generated index.html to PublicDir (overwriting any prior content).
 // This is the correct post-FlushToDisk behaviour: stale files are always
 // overwritten so the external server boots against fresh assets.
 func TestBuild_PublicDirGetsGeneratedIndex(t *testing.T) {
@@ -82,7 +82,7 @@ func TestBuild_PublicDirGetsGeneratedIndex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to read index.html: %v", err)
 	}
-	// The generated file must be valid HTML produced by assetmin, not empty.
+	// The generated file must be valid HTML produced by sitec, not empty.
 	if len(got) == 0 {
 		t.Error("index.html is empty after Build()")
 	}

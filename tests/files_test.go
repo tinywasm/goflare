@@ -9,6 +9,7 @@ import (
 	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/goflare/files"
 	"github.com/tinywasm/goflare/r2"
+	"github.com/tinywasm/model"
 	"github.com/tinywasm/router"
 )
 
@@ -49,6 +50,14 @@ func (c *fakeCtx) SetCookie(router.Cookie)   {}
 // why this suite stayed green while every upload answered 403 in production.
 func (c *fakeCtx) SetUserID(id string) { c.uid = id }
 func (c *fakeCtx) UserID() string      { return c.uid }
+
+func (c *fakeCtx) Decode(into model.Decodable) error {
+	return nil
+}
+
+func (c *fakeCtx) Encode(v model.Encodable) error {
+	return nil
+}
 func (c *fakeCtx) Cookie(string) (router.Cookie, bool) {
 	return router.Cookie{}, false
 }
@@ -62,6 +71,11 @@ func (c *fakeCtx) Write(b []byte) (int, error) {
 var pngBytes = []byte{
 	0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A,
 	0xFF, 0xFE, 0x00, 0x80, 0x21, 0x42,
+}
+
+var jpgBytes = []byte{
+	0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 'J', 'F', 'I', 'F', 0x00, 0x01,
+	0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, 0xFF, 0xD9,
 }
 
 func newStore(t *testing.T) (*files.Store, map[string][]byte) {
@@ -230,6 +244,90 @@ func (brokenBucket) Put(key string, data []byte, contentType string) error {
 }
 func (brokenBucket) Get(key string) ([]byte, string, error) {
 	return nil, "", fmt.Err("r2: get " + key + ": bucket unreachable")
+}
+
+func TestFiles_PerOwnerReplacesPriorUpload(t *testing.T) {
+	s, store := newStore(t)
+	s.PerOwner()
+
+	up1 := newCtx("PUT", filesPrefix, pngBytes)
+	up1.SetUserID("user_123")
+	upload(t, s, up1)
+
+	if up1.status != 201 {
+		t.Fatalf("up1 status = %d, want 201", up1.status)
+	}
+	if key := string(up1.written); key != "user_123" {
+		t.Errorf("key = %q, want user_123", key)
+	}
+
+	up2 := newCtx("PUT", filesPrefix, jpgBytes)
+	up2.SetUserID("user_123")
+	upload(t, s, up2)
+
+	if up2.status != 201 {
+		t.Fatalf("up2 status = %d, want 201", up2.status)
+	}
+
+	if len(store) != 1 {
+		t.Fatalf("bucket size = %d, want 1 object in PerOwner mode", len(store))
+	}
+	stored, ok := store["user_123"]
+	if !ok {
+		t.Fatalf("key user_123 not found in bucket")
+	}
+	if !bytes.Equal(stored, jpgBytes) {
+		t.Errorf("stored content does not match second upload")
+	}
+
+	down := newCtx("GET", filesPrefix+"user_123", nil)
+	serve(t, s, down)
+	if down.headers["Content-Type"] != "image/jpeg" {
+		t.Errorf("served Content-Type = %q, want image/jpeg", down.headers["Content-Type"])
+	}
+}
+
+func TestFiles_PerOwnerIsolatesUsers(t *testing.T) {
+	s, store := newStore(t)
+	s.PerOwner()
+
+	u1 := newCtx("PUT", filesPrefix, pngBytes)
+	u1.SetUserID("user_1")
+	upload(t, s, u1)
+
+	u2 := newCtx("PUT", filesPrefix, jpgBytes)
+	u2.SetUserID("user_2")
+	upload(t, s, u2)
+
+	if len(store) != 2 {
+		t.Fatalf("bucket size = %d, want 2 objects", len(store))
+	}
+	if !bytes.Equal(store["user_1"], pngBytes) {
+		t.Errorf("user_1 data mismatch")
+	}
+	if !bytes.Equal(store["user_2"], jpgBytes) {
+		t.Errorf("user_2 data mismatch")
+	}
+}
+
+func TestFiles_PerOwnerValidationFailureDoesNotOverwriteData(t *testing.T) {
+	s, store := newStore(t)
+	s.PerOwner()
+
+	u1 := newCtx("PUT", filesPrefix, pngBytes)
+	u1.SetUserID("user_1")
+	upload(t, s, u1)
+
+	bad := newCtx("PUT", filesPrefix, []byte("not an image"))
+	bad.SetUserID("user_1")
+	upload(t, s, bad)
+
+	if bad.status != 415 {
+		t.Errorf("bad upload status = %d, want 415", bad.status)
+	}
+	if !bytes.Equal(store["user_1"], pngBytes) {
+		t.Errorf("valid photo was corrupted after rejected upload")
+	}
 }
 
 func TestFiles_BucketFailureIs502AndKeepsTheCause(t *testing.T) {

@@ -1,7 +1,8 @@
 ---
 PLAN: "— cola de ejecución de `goflare`"
-STATUS: running
+STATUS: review
 SESSION: 5930904504825553696
+PR: https://github.com/tinywasm/goflare/pull/20
 ---
 > Este plan se despacha vía el flujo CodeJob. Ver skill: agents-workflow.
 > Orquestado por `tinywasm/docs/ROUTER_ADAPTER_MASTER_PLAN.md` — **Fase 3 (propagación)**.
@@ -18,11 +19,11 @@ SESSION: 5930904504825553696
 
 | Orden | Plan | Estado | Asunto |
 |-------|------|--------|--------|
-| 0 | [PLAN_MIGRAR_SITEC.md](PLAN_MIGRAR_SITEC.md) | ☐ **PENDIENTE — URGENTE** | `assetmin` y `client` están archivados; ambos se reemplazan por `tinywasm/sitec` (v0.0.58+, ya publicado con el `WasmBuilder` parametrizado que necesita el borde). Elimina de paso la dependencia transitiva de `zalando/go-keyring`. |
+| 0 | [PLAN_MIGRAR_SITEC.md](PLAN_MIGRAR_SITEC.md) | ✅ **COMPLETADA** | `assetmin` y `client` están archivados; ambos se reemplazan por `tinywasm/sitec` (v0.0.58+, ya publicado con el `WasmBuilder` parametrizado que necesita el borde). Elimina de paso la dependencia transitiva de `zalando/go-keyring`. |
 | 1 | [PLAN_STAGE_1_ROUTER.md](PLAN_STAGE_1_ROUTER.md) | ✅ **COMPLETADA** (PR #18, mergeado) | `goflare` deja de ser dueño del contrato de enrutado y pasa a implementarlo: borra el fork `goflare/router`, reconstruye `devserver/` sobre `server/httpd`, renombra `pages/` → `edge/` y endurece la detección de modo. |
 | 2 | [PLAN_STAGE_2_FILES.md](PLAN_STAGE_2_FILES.md) | ⚠️ **APLICADA, PERO INSERVIBLE EN PRODUCCIÓN** | Subir y servir archivos en el borde: `PublicAsset`/`PublicDir`, cuerpo binario y perezoso en `workers/request.go`, bucket R2 (`r2/`) y el helper de subida (`files/`). **La subida responde 403 a todo el mundo** — lo arregla la Etapa 3. |
 | 3 | [PLAN_STAGE_3_EDGE_ACCESS.md](PLAN_STAGE_3_EDGE_ACCESS.md) | ✅ **IMPLEMENTADA** (sin publicar) | `edge` adopta el contrato `model.Access` con asientos `Authn`/`Authorize`, ejecuta la verja **después** de establecer identidad, y demuestra conformidad. Sin esto, toda ruta con `.Requires()` es un 403 eterno. **Rompe API**: `edge.NewRouter()` pasa a tomar `edge.Config`. |
-| 4 | [PLAN_STAGE_4_FILES_PER_OWNER.md](PLAN_STAGE_4_FILES_PER_OWNER.md) | ☐ **PENDIENTE** | `files.Store.PerOwner()`: la clave es la identidad del que sube → **un archivo por usuario, reemplazado** al subir otro. Hoy cada subida crea un objeto nuevo y deja basura que nadie borra. Orquestado por `DEMO_FOUR_APIS_MASTER_PLAN.md` (Fase F). |
+| 4 | [PLAN_STAGE_4_FILES_PER_OWNER.md](PLAN_STAGE_4_FILES_PER_OWNER.md) | ✅ **COMPLETADA** | `files.Store.PerOwner()`: la clave es la identidad del que sube → **un archivo por usuario, reemplazado** al subir otro. Hoy cada subida crea un objeto nuevo y deja basura que nadie borra. Orquestado por `DEMO_FOUR_APIS_MASTER_PLAN.md` (Fase F). |
 
 ## Estado actual
 

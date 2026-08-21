@@ -13,7 +13,16 @@ import (
 )
 
 func (g *Goflare) generateWasmFile() error {
-	return g.edgeCompiler.RecompileMainWasm()
+	sourceDir := g.Config.Entry
+	if sourceDir == "" {
+		sourceDir = g.Config.PublicDir
+	}
+	out, err := g.edgeBuilder.Build(sourceDir)
+	if err != nil {
+		return err
+	}
+	targetPath := filepath.Join(g.stagingDir, "edge.wasm")
+	return os.WriteFile(targetPath, out.Binary, 0644)
 }
 
 // EnsureTinyGo installs TinyGo if absent and guarantees its bin dir is in PATH
