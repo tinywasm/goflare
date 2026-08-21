@@ -13,6 +13,7 @@ require (
 	github.com/tinywasm/server v0.2.37
 	github.com/tinywasm/sitec v0.0.58
 	github.com/tinywasm/sqlt v0.0.8
+	github.com/tinywasm/storage v0.0.2
 	github.com/tinywasm/tinygo v0.0.11
 	lukechampine.com/blake3 v1.4.1
 )
@@ -23,7 +24,6 @@ require (
 	github.com/tinywasm/ddl v0.0.4 // indirect
 	github.com/tinywasm/font v0.0.4 // indirect
 	github.com/tinywasm/modfind v0.0.4 // indirect
-	github.com/tinywasm/storage v0.0.2 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
