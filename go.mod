@@ -6,7 +6,7 @@ require (
 	github.com/tdewolff/minify/v2 v2.24.12
 	github.com/tinywasm/await v0.1.0
 	github.com/tinywasm/filetype v0.0.2
-	github.com/tinywasm/fmt v0.25.6
+	github.com/tinywasm/fmt v0.25.7
 	github.com/tinywasm/jsvalue v0.0.15
 	github.com/tinywasm/orm v0.11.7
 	github.com/tinywasm/server v0.2.37

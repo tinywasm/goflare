@@ -29,8 +29,8 @@ github.com/tinywasm/fetch v0.1.24 h1:UynB2NPPgYrwcRx6ZujkRUTlfUUkNs60J0O63/1FmAs
 github.com/tinywasm/fetch v0.1.24/go.mod h1:Hx9bkdjC5fcf++EWjHKUzEn2OZpUbfoXNQV8tbdC5SI=
 github.com/tinywasm/filetype v0.0.2 h1:3e9zQarlYwRP+AjeZzsgDgHuKzZx3+8coPy5JtlHkCc=
 github.com/tinywasm/filetype v0.0.2/go.mod h1:7oIYSOoc3T7U9B3GQHKzYarGQ518iekIImR64s/ht9U=
-github.com/tinywasm/fmt v0.25.6 h1:j6IDSoU9l+0GnYcx0pIa3Ckhg5j11mNPxTR9tQXU3sc=
-github.com/tinywasm/fmt v0.25.6/go.mod h1:2Y4hlsQxqVsZ5z9vQL5XQbEzLQtQOr1Bhp44nPGfydA=
+github.com/tinywasm/fmt v0.25.7 h1:Rju5B7LfrGu2QOA0L5IN0Cb9NwH5h8afGbawnF59Mec=
+github.com/tinywasm/fmt v0.25.7/go.mod h1:2Y4hlsQxqVsZ5z9vQL5XQbEzLQtQOr1Bhp44nPGfydA=
 github.com/tinywasm/font v0.0.4 h1:dugQHev1xk2YzA01xpqV4WLCHxEmk6JEu2GkDbPxlfE=
 github.com/tinywasm/font v0.0.4/go.mod h1:mc8y0jI0VWgsSNEk5f0G3x61Xah4xyfOf9/ds3YaLD8=
 github.com/tinywasm/html v0.0.17 h1:RROL3aLAGvAAQKsIPK+3XGjr1wOp7PZzxQno0kK69JI=
