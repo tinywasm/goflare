@@ -1,7 +1,8 @@
 ---
 PLAN: "— cola de ejecución de `goflare`"
-STATUS: running
+STATUS: review
 SESSION: 5930904504825553696
+PR: https://github.com/tinywasm/goflare/pull/20
 ---
 > Este plan se despacha vía el flujo CodeJob. Ver skill: agents-workflow.
 > Orquestado por `tinywasm/docs/ROUTER_ADAPTER_MASTER_PLAN.md` — **Fase 3 (propagación)**.
