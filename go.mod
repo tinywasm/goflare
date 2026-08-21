@@ -24,7 +24,7 @@ require (
 	github.com/tinywasm/color v0.1.1 // indirect
 	github.com/tinywasm/ddl v0.0.4 // indirect
 	github.com/tinywasm/font v0.0.4 // indirect
-	github.com/tinywasm/image v0.0.26 // indirect
+	github.com/tinywasm/image v0.1.0 // indirect
 	github.com/tinywasm/js v0.0.4 // indirect
 	github.com/tinywasm/modfind v0.0.4 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
