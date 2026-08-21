@@ -14,6 +14,7 @@ import (
 // After fix: PublicDir is the final output — no copy step.
 func TestBuild_NoDist(t *testing.T) {
 	env := newTestEnv(t)
+	builder, _ := newFakeSiteBuilder(map[string][]byte{"index.html": []byte("<html></html>")}, nil)
 
 	cfg := &goflare.Config{
 		ProjectName: "test",
@@ -22,6 +23,7 @@ func TestBuild_NoDist(t *testing.T) {
 	}
 
 	g := goflare.New(cfg)
+	g.SetSiteBuilder(builder)
 	if err := g.Build(); err != nil {
 		t.Fatalf("Build failed: %v", err)
 	}
@@ -36,8 +38,10 @@ func TestBuild_NoDist(t *testing.T) {
 // never receives Pages files (index.html, style.css, client.wasm).
 func TestBuild_OutputDirContainsOnlyWorkerArtifacts(t *testing.T) {
 	env := newTestEnv(t)
-
-	env.writePublic("style.css", "body {}")
+	builder, _ := newFakeSiteBuilder(map[string][]byte{
+		"index.html": []byte("<html></html>"),
+		"style.css":  []byte("body {}"),
+	}, nil)
 
 	cfg := &goflare.Config{
 		ProjectName: "test",
@@ -46,6 +50,7 @@ func TestBuild_OutputDirContainsOnlyWorkerArtifacts(t *testing.T) {
 	}
 
 	g := goflare.New(cfg)
+	g.SetSiteBuilder(builder)
 	if err := g.Build(); err != nil {
 		t.Fatalf("Build failed: %v", err)
 	}
@@ -66,6 +71,9 @@ func TestBuild_OutputDirContainsOnlyWorkerArtifacts(t *testing.T) {
 // overwritten so the external server boots against fresh assets.
 func TestBuild_PublicDirGetsGeneratedIndex(t *testing.T) {
 	env := newTestEnv(t)
+	builder, _ := newFakeSiteBuilder(map[string][]byte{
+		"index.html": []byte("<!DOCTYPE html><html><body>sitec output</body></html>"),
+	}, nil)
 
 	cfg := &goflare.Config{
 		ProjectName: "test",
@@ -74,6 +82,7 @@ func TestBuild_PublicDirGetsGeneratedIndex(t *testing.T) {
 	}
 
 	g := goflare.New(cfg)
+	g.SetSiteBuilder(builder)
 	if err := g.Build(); err != nil {
 		t.Fatalf("Build failed: %v", err)
 	}
@@ -85,5 +94,8 @@ func TestBuild_PublicDirGetsGeneratedIndex(t *testing.T) {
 	// The generated file must be valid HTML produced by sitec, not empty.
 	if len(got) == 0 {
 		t.Error("index.html is empty after Build()")
+	}
+	if string(got) != "<!DOCTYPE html><html><body>sitec output</body></html>" {
+		t.Errorf("unexpected index.html content: %s", string(got))
 	}
 }

@@ -19,7 +19,6 @@ func TestDeployWorker_UploadScript(t *testing.T) {
 	os.Setenv("CLOUDFLARE_API_TOKEN", "valid-token")
 	defer os.Unsetenv("CLOUDFLARE_API_TOKEN")
 
-
 	outputDir := filepath.Join(tmpDir, ".build")
 	os.MkdirAll(outputDir, 0755)
 	os.WriteFile(filepath.Join(outputDir, "edge.js"), []byte("console.log('edge')"), 0644)

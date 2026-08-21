@@ -15,11 +15,11 @@ import (
 //
 // Mode is inferred from edge/main.go imports (D11):
 //   - pages-functions: edge/main.go imports github.com/tinywasm/goflare/edge
-//                      → output functions/[[path]].mjs + functions/edge.wasm
+//     → output functions/[[path]].mjs + functions/edge.wasm
 //   - workers:         edge/main.go imports github.com/tinywasm/goflare/workers
-//                      → output .build/edge.js + .build/edge.wasm (legacy)
+//     → output .build/edge.js + .build/edge.wasm (legacy)
 //   - pages (static):  no edge/main.go but PublicDir exists
-//                      → only static + optional frontend wasm
+//     → only static + optional frontend wasm
 func (g *Goflare) Build() error {
 	if g.stagingDir != g.Config.OutputDir {
 		defer os.RemoveAll(g.stagingDir)
@@ -80,13 +80,22 @@ func (g *Goflare) Build() error {
 // https://developers.cloudflare.com/workers/platform/limits/#worker-size
 const maxWasmSize = 1 * 1024 * 1024 // 1 MiB
 
+// CompilerModeStdlib compila el frontend con el Go estandar en vez de TinyGo:
+// binario grande, compilacion rapida, sin minificar. Es el modo de desarrollo.
+const CompilerModeStdlib = "L"
+
+// siteMode traduce el modo de compilador de goflare al de sitec.
+func siteMode(compilerMode string) sitec.Mode {
+	if compilerMode == CompilerModeStdlib {
+		return sitec.ModeDev
+	}
+	return sitec.ModeRelease
+}
+
 const (
 	// moduleRoot es el directorio desde el que corre goflare. Toda ruta de
 	// fuente del proyecto —edge/main.go, web/client.go— se resuelve desde aqui.
 	moduleRoot = "."
-
-	dirWeb       = "web"
-	fileClientGo = "client.go"
 )
 
 func checkWasmSize(path string) error {
@@ -204,37 +213,23 @@ func (g *Goflare) buildPages() error {
 		return fmt.Errorf("public dir does not exist: %s", g.Config.PublicDir)
 	}
 
-	// 2. Compile frontend WASM if web/client.go exists
-	frontEntry := filepath.Join(dirWeb, fileClientGo)
-	if _, err := os.Stat(frontEntry); err == nil {
-		g.Logger("compiling frontend WASM: web/client.go →", g.Config.PublicDir)
-		useStdlib := g.Config.CompilerMode == "L"
-		frontBuilder := sitec.NewWasmBuilder(useStdlib, sitec.WasmBuildOptions{})
-		// El builder resuelve su entry —web/client.go— relativo al directorio
-		// que recibe, y ese directorio es la raiz del modulo: la misma desde la
-		// que se acaba de comprobar frontEntry. Pasar filepath.Dir(PublicDir)
-		// hacia que buscara web/web/client.go.
-		out, err := frontBuilder.Build(moduleRoot)
-		if err != nil {
-			return fmt.Errorf("frontend WASM compilation failed: %w", err)
-		}
-
-		outPath := filepath.Join(g.Config.PublicDir, out.Filename)
-		if err := os.WriteFile(outPath, out.Binary, 0644); err != nil {
-			return fmt.Errorf("failed to write frontend WASM binary: %w", err)
-		}
-
-		if g.assetMin != nil {
-			g.assetMin.SetWasm(out.Filename, out.Runtime)
-		}
+	// 2. sitec recorre el modulo, recoge lo que el proyecto declara, compila
+	//    el WASM del frontend y arma el sitio completo en memoria.
+	g.Logger("building site →", g.Config.PublicDir)
+	site, err := g.siteBuilder(sitec.BuildConfig{
+		RootDir:   moduleRoot,
+		Mode:      siteMode(g.Config.CompilerMode),
+		OutputDir: g.Config.PublicDir,
+		AppName:   g.Config.ProjectName,
+		Log:       g.Logger,
+	})
+	if err != nil {
+		return fmt.Errorf("site build failed: %w", err)
 	}
 
-	// 3. Generate script.js + style.css via sitec
-	if g.assetMin != nil {
-		g.Logger("generating assets: script.js, style.css →", g.Config.PublicDir)
-		if err := g.assetMin.FlushToDisk(); err != nil {
-			return fmt.Errorf("sitec asset flush failed: %w", err)
-		}
+	// 3. Nada existe hasta que se vuelca: Build() trabaja en memoria.
+	if err := site.WriteTo(sitec.NewOsFS()); err != nil {
+		return fmt.Errorf("failed to write site artifacts: %w", err)
 	}
 
 	return nil
