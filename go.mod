@@ -42,7 +42,7 @@ require (
 	github.com/tinywasm/dom v0.13.5 // indirect
 	github.com/tinywasm/fetch v0.1.24 // indirect
 	github.com/tinywasm/html v0.0.17 // indirect
-	github.com/tinywasm/json v0.5.17
+	github.com/tinywasm/json v0.5.21
 	github.com/tinywasm/model v0.1.4
 	github.com/tinywasm/router v0.1.23
 	github.com/tinywasm/svg v0.3.0 // indirect
