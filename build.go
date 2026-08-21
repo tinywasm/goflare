@@ -80,6 +80,15 @@ func (g *Goflare) Build() error {
 // https://developers.cloudflare.com/workers/platform/limits/#worker-size
 const maxWasmSize = 1 * 1024 * 1024 // 1 MiB
 
+const (
+	// moduleRoot es el directorio desde el que corre goflare. Toda ruta de
+	// fuente del proyecto —edge/main.go, web/client.go— se resuelve desde aqui.
+	moduleRoot = "."
+
+	dirWeb       = "web"
+	fileClientGo = "client.go"
+)
+
 func checkWasmSize(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -196,13 +205,16 @@ func (g *Goflare) buildPages() error {
 	}
 
 	// 2. Compile frontend WASM if web/client.go exists
-	frontEntry := filepath.Join("web", "client.go")
+	frontEntry := filepath.Join(dirWeb, fileClientGo)
 	if _, err := os.Stat(frontEntry); err == nil {
 		g.Logger("compiling frontend WASM: web/client.go →", g.Config.PublicDir)
 		useStdlib := g.Config.CompilerMode == "L"
 		frontBuilder := sitec.NewWasmBuilder(useStdlib, sitec.WasmBuildOptions{})
-		frontSourceDir := filepath.Dir(g.Config.PublicDir)
-		out, err := frontBuilder.Build(frontSourceDir)
+		// El builder resuelve su entry —web/client.go— relativo al directorio
+		// que recibe, y ese directorio es la raiz del modulo: la misma desde la
+		// que se acaba de comprobar frontEntry. Pasar filepath.Dir(PublicDir)
+		// hacia que buscara web/web/client.go.
+		out, err := frontBuilder.Build(moduleRoot)
 		if err != nil {
 			return fmt.Errorf("frontend WASM compilation failed: %w", err)
 		}
