@@ -3,6 +3,8 @@ PLAN: "feat!: el build de páginas usa la tubería completa de sitec"
 TAG: v0.5.0
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 16358991460281098374
 ---
 
 > Plan autocontenido: todo lo necesario para ejecutarlo está aquí.
