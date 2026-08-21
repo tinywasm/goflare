@@ -7,7 +7,6 @@ require (
 	github.com/tinywasm/await v0.1.0
 	github.com/tinywasm/filetype v0.0.2
 	github.com/tinywasm/fmt v0.25.6
-	github.com/tinywasm/js v0.0.4
 	github.com/tinywasm/jsvalue v0.0.15
 	github.com/tinywasm/orm v0.11.7
 	github.com/tinywasm/server v0.2.37
@@ -26,6 +25,7 @@ require (
 	github.com/tinywasm/ddl v0.0.4 // indirect
 	github.com/tinywasm/font v0.0.4 // indirect
 	github.com/tinywasm/image v0.0.26 // indirect
+	github.com/tinywasm/js v0.0.4 // indirect
 	github.com/tinywasm/modfind v0.0.4 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/image v0.45.0 // indirect
@@ -45,7 +45,7 @@ require (
 	github.com/tinywasm/json v0.5.17
 	github.com/tinywasm/model v0.1.4
 	github.com/tinywasm/router v0.1.23
-	github.com/tinywasm/svg v0.2.0 // indirect
+	github.com/tinywasm/svg v0.3.0 // indirect
 	github.com/tinywasm/time v0.5.0 // indirect
 	github.com/tinywasm/unixid v0.2.26
 )
