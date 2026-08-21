@@ -13,7 +13,10 @@ import (
 func TestBuild_PagesOnly(t *testing.T) {
 	env := newTestEnv(t)
 
-	env.writePublic("assets/style.css", "body {}")
+	builder, _ := newFakeSiteBuilder(map[string][]byte{
+		"index.html":       []byte("<html></html>"),
+		"assets/style.css": []byte("body {}"),
+	}, nil)
 
 	cfg := &goflare.Config{
 		ProjectName: "test",
@@ -23,6 +26,7 @@ func TestBuild_PagesOnly(t *testing.T) {
 	}
 
 	g := goflare.New(cfg)
+	g.SetSiteBuilder(builder)
 	err := g.Build()
 	if err != nil {
 		t.Fatalf("Build failed: %v", err)

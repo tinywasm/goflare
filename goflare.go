@@ -8,9 +8,29 @@ import (
 	"os"
 	"time"
 
-	"github.com/tinywasm/js"
 	"github.com/tinywasm/sitec"
 )
+
+// SiteOutput es el sitio ya compilado, listo para volcarse a disco.
+type SiteOutput interface {
+	WriteTo(fs sitec.FS) error
+}
+
+// SiteBuilder compila el sitio estático del proyecto.
+//
+// Es una costura deliberada: la tubería real de sitec exige un módulo Go
+// válido en disco y un compilador instalado, y los tests de este repo no
+// tienen ninguna de las dos cosas. La implementación real es buildSite.
+type SiteBuilder func(cfg sitec.BuildConfig) (SiteOutput, error)
+
+// buildSite es la implementación real: la tubería completa de sitec.
+func buildSite(cfg sitec.BuildConfig) (SiteOutput, error) {
+	out, err := sitec.Build(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
 
 type Config struct {
 	// Project identity
@@ -42,7 +62,7 @@ type Config struct {
 
 type Goflare struct {
 	edgeBuilder  sitec.WasmBuilder // Worker compiler (Entry)
-	assetMin     *sitec.AssetMin   // generates script.js + style.css — nil if no PublicDir
+	siteBuilder  SiteBuilder       // Static pages compiler
 	Config       *Config           // exported so CLI can read it after LoadConfigFromEnv
 	log          func(message ...any)
 	BaseURL      string
@@ -50,11 +70,11 @@ type Goflare struct {
 	RetryBackoff time.Duration // base duration for retries (defaults to 1s)
 }
 
-func syncJSRuntime(mode string) {
-	if mode == "L" {
-		js.SetRuntime(js.RuntimeGo)
-	} else {
-		js.SetRuntime(js.RuntimeTinyGo)
+// SetSiteBuilder sustituye el compilador de sitio. Pensado para tests; en
+// producción nadie lo llama y se usa buildSite.
+func (g *Goflare) SetSiteBuilder(b SiteBuilder) {
+	if b != nil {
+		g.siteBuilder = b
 	}
 }
 
@@ -84,20 +104,11 @@ func New(cfg *Config) *Goflare {
 
 	g := &Goflare{
 		edgeBuilder:  edgeBuilder,
+		siteBuilder:  buildSite,
 		Config:       cfg,
 		BaseURL:      cfAPIBase,
 		stagingDir:   staging,
 		RetryBackoff: time.Second,
-	}
-
-	if cfg.PublicDir != "" {
-		syncJSRuntime(cfg.CompilerMode)
-
-		g.assetMin = sitec.NewAssetMin(&sitec.Config{
-			OutputDir: cfg.PublicDir,
-		})
-		g.assetMin.SetFS(sitec.NewOsFS())
-		g.assetMin.UpdateSSRModule("tinywasm/js/bootstrap", "", []*js.Script{js.PageBootstrap()}, "", nil)
 	}
 
 	return g
@@ -109,9 +120,6 @@ func (g *Goflare) StagingDir() string { return g.stagingDir }
 
 func (g *Goflare) SetLog(f func(message ...any)) {
 	g.log = f
-	if g.assetMin != nil {
-		g.assetMin.SetLog(f)
-	}
 }
 
 func (g *Goflare) Logger(messages ...any) {

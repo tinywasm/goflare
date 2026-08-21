@@ -49,6 +49,8 @@ func main() {}
 		OutputDir:   filepath.Join(tmpDir, ".build/"),
 	}
 	g := goflare.New(cfg)
+	builder, _ := newFakeSiteBuilder(map[string][]byte{"index.html": []byte("<html></html>")}, nil)
+	g.SetSiteBuilder(builder)
 
 	err = g.GeneratePagesFiles()
 	if err != nil {

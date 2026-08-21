@@ -29,9 +29,9 @@ func main() {}`,
 			want: ModeWorkers,
 		},
 		{
-			name: "PagesStatic",
+			name:      "PagesStatic",
 			publicDir: "public",
-			want: ModePagesStatic,
+			want:      ModePagesStatic,
 		},
 		{
 			name: "NoKnownImport",

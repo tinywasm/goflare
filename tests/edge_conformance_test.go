@@ -33,9 +33,9 @@ type conformanceCtx struct {
 	out    []byte
 }
 
-func (c *conformanceCtx) Method() string          { return c.method }
-func (c *conformanceCtx) Path() string            { return c.path }
-func (c *conformanceCtx) Body() []byte            { return c.body }
+func (c *conformanceCtx) Method() string { return c.method }
+func (c *conformanceCtx) Path() string   { return c.path }
+func (c *conformanceCtx) Body() []byte   { return c.body }
 func (c *conformanceCtx) GetHeader(k string) string {
 	return c.headers[k]
 }
@@ -50,8 +50,8 @@ func (c *conformanceCtx) Write(b []byte) (int, error) {
 	c.out = append(c.out, b...)
 	return len(b), nil
 }
-func (c *conformanceCtx) SetValue(string, any) {}
-func (c *conformanceCtx) Value(string) any     { return nil }
+func (c *conformanceCtx) SetValue(string, any)    {}
+func (c *conformanceCtx) Value(string) any        { return nil }
 func (c *conformanceCtx) SetCookie(router.Cookie) {}
 func (c *conformanceCtx) Cookie(string) (router.Cookie, bool) {
 	return router.Cookie{}, false

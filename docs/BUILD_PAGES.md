@@ -7,8 +7,9 @@ GoFlare supports deploying static sites and "Advanced Mode" Pages projects.
 GoFlare will automatically detect the public directory if `web/public/` exists (Convention). `goflare build` will:
 
 1. **Verify PUBLIC_DIR:** Checks that the public directory exists.
-2. **Compile Frontend WASM:** If `web/client.go` exists, it compiles it to `PUBLIC_DIR/client.wasm`.
-3. **Generate Assets:** Uses `sitec` to generate `script.js` and `style.css` in `PUBLIC_DIR`.
+2. **Delegate to sitec Build Pipeline:** Delegates static site compilation to `sitec`'s complete build pipeline. `sitec` scans the module, extracts declared producers (`RootCSS()`, `RenderCSS()`, `RenderHTML()`, `IconSvg()`, `Fonts()`, `RenderPages()`), compiles frontend WASM if `web/client.go` exists, generates `style.css`, `script.js`, SVG sprites, fonts, and `index.html` in memory, and writes the output to `PUBLIC_DIR`.
+
+Note: A project that declares a `css.go` file without providing a valid producer (e.g. `RootCSS()` or `RenderCSS()`) will cause the build to fail loudly.
 
 ## Deployment
 
