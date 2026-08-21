@@ -53,8 +53,8 @@ github.com/tinywasm/router v0.1.23 h1:n/silw68NdWG1LN/y6KW8VRavkHvM83QXq98duhBJx
 github.com/tinywasm/router v0.1.23/go.mod h1:E3O8AO8ryGrTeKhkXI6PgT32tbXkoCQ55pkDUFWEB2I=
 github.com/tinywasm/server v0.2.37 h1:GWoLLOMHKN8M5Po+DsEX7vgnyhOCb1ZtyLW8WAGdy9c=
 github.com/tinywasm/server v0.2.37/go.mod h1:cGuc0f2xQYOxfO+Ih7+O+q859jnAN7nbvyDMNPAiD7g=
-github.com/tinywasm/sitec v0.2.0 h1:ZGNpbQcsscOb8qHX10shtAWemfGiQKyTVzx3SJjJHfc=
-github.com/tinywasm/sitec v0.2.0/go.mod h1:RZTkYSqYD/Lp1xp799vWBPkogqx0Hfr/pzylZm7kuQg=
+github.com/tinywasm/sitec v0.2.1 h1:7xzWGDdo8ELWunpzKymr8H3xxiYLi2ArGlcsD7d+Gfo=
+github.com/tinywasm/sitec v0.2.1/go.mod h1:RZTkYSqYD/Lp1xp799vWBPkogqx0Hfr/pzylZm7kuQg=
 github.com/tinywasm/sqlt v0.0.8 h1:yu+9e/4djfTqkC53x5iyzJBBGcoFKvafYDtWv3J08s0=
 github.com/tinywasm/sqlt v0.0.8/go.mod h1:03pCtZV/rlsb0BiF3OfbX/pNGM7DRiWincYyD+c6uDA=
 github.com/tinywasm/storage v0.0.2 h1:2z2w6Vpy5057mtvXWzK79F4XslJBvQl6GqAm+WacfyU=
