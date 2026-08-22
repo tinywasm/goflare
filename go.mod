@@ -11,7 +11,7 @@ require (
 	github.com/tinywasm/jsvalue v0.0.15
 	github.com/tinywasm/orm v0.11.7
 	github.com/tinywasm/server v0.2.37
-	github.com/tinywasm/sitec v0.2.1
+	github.com/tinywasm/sitec v0.2.4
 	github.com/tinywasm/sqlt v0.0.8
 	github.com/tinywasm/storage v0.0.2
 	github.com/tinywasm/tinygo v0.0.11
