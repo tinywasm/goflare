@@ -14,7 +14,7 @@ require (
 	github.com/tinywasm/sitec v0.2.4
 	github.com/tinywasm/sqlt v0.0.8
 	github.com/tinywasm/storage v0.0.2
-	github.com/tinywasm/tinygo v0.0.11
+	github.com/tinywasm/tinygo v1.0.0
 	lukechampine.com/blake3 v1.4.1
 )
 
