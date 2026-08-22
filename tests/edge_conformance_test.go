@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/tinywasm/goflare/edge"
+	"github.com/tinywasm/json"
+	"github.com/tinywasm/model"
 	"github.com/tinywasm/router"
 	"github.com/tinywasm/router/conformance"
 )
@@ -59,6 +61,19 @@ func (c *conformanceCtx) Cookie(string) (router.Cookie, bool) {
 // never see a caller, and no test could ever notice.
 func (c *conformanceCtx) SetUserID(id string) { c.uid = id }
 func (c *conformanceCtx) UserID() string      { return c.uid }
+
+func (c *conformanceCtx) Decode(into model.Decodable) error {
+	return json.Decode(c.Body(), into)
+}
+
+func (c *conformanceCtx) Encode(v model.Encodable) error {
+	var buf []byte
+	if err := json.Encode(v, &buf); err != nil {
+		return err
+	}
+	_, err := c.Write(buf)
+	return err
+}
 
 var _ router.Context = (*conformanceCtx)(nil)
 
