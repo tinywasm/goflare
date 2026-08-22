@@ -6,7 +6,9 @@ import (
 	"syscall/js"
 
 	"github.com/tinywasm/await"
+	"github.com/tinywasm/ddl"
 	"github.com/tinywasm/jsvalue"
+	"github.com/tinywasm/model"
 	"github.com/tinywasm/orm"
 	"github.com/tinywasm/sqlt"
 	"github.com/tinywasm/storage"
@@ -24,6 +26,21 @@ func NewEdge(bindingName string) (*orm.DB, error) {
 		return nil, ErrDatabaseNotFound
 	}
 	return orm.New(&adapter{dbObj: v, Compiler: sqlt.NewCompiler()}), nil
+}
+
+// CompileDDL forwards to the underlying sqlt compiler, so a caller can migrate through
+// ddl.New(db.RawConn(), db.RawConn().(ddl.Compiler)) exactly like the sqlite/postgres adapters
+// (see sqlite.DDLCompiler). storage.Compiler above only exposes read/write compilation, not DDL,
+// so it is forwarded explicitly rather than promoted.
+func (a *adapter) CompileDDL(s ddl.Stmt, m model.Model) (string, []any, error) {
+	return sqlt.NewCompiler().CompileDDL(s, m)
+}
+
+// DDLCompiler returns the ddl.Compiler half of the connection, for callers wiring up
+// ddl.New(conn, d1.DDLCompiler(conn)) — mirrors sqlite.DDLCompiler.
+func DDLCompiler(conn storage.Conn) (ddl.Compiler, bool) {
+	c, ok := conn.(ddl.Compiler)
+	return c, ok
 }
 
 func (a *adapter) Exec(query string, args ...any) error {
