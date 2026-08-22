@@ -8,7 +8,6 @@ import (
 	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/goflare/log"
 	"github.com/tinywasm/goflare/workers"
-	"github.com/tinywasm/json"
 	"github.com/tinywasm/model"
 	"github.com/tinywasm/router"
 )
@@ -57,19 +56,6 @@ func (c *wasmContext) SetUserID(id string) {
 
 func (c *wasmContext) UserID() string {
 	return c.uid
-}
-
-func (c *wasmContext) Decode(into model.Decodable) error {
-	return json.Decode(c.Body(), into)
-}
-
-func (c *wasmContext) Encode(v model.Encodable) error {
-	var buf []byte
-	if err := json.Encode(v, &buf); err != nil {
-		return err
-	}
-	_, err := c.Write(buf)
-	return err
 }
 
 func (c *wasmContext) SetCookie(cookie router.Cookie) {
