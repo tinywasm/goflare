@@ -5,7 +5,7 @@
 | Command | Description |
 |---|---|
 | `goflare auth --check` | Validate `CLOUDFLARE_API_TOKEN` from environment. |
-| `goflare build` | Build the project (wasm + assets). Inferred mode. |
+| `goflare build` | Build the project (wasm + assets). |
 | `goflare deploy` | Deploy to Cloudflare. Requires env vars. CI only. |
 
 ## Configuration (.env)
@@ -13,8 +13,12 @@
 | Key | Description |
 |---|---|
 | `PROJECT_NAME` | Identity of the project in Cloudflare. |
-| `DOMAIN` | Custom domain for Pages (optional). |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID. |
+| `WORKER_NAME` | Name of the Worker script (default: `<PROJECT_NAME>-worker`). |
+| `DOMAIN` | Custom domain (optional). |
 | `COMPILER_MODE` | `S` (Small), `M` (Medium), `L` (Large). Default: `S`. |
+| `COMPATIBILITY_DATE` | Workers compatibility date (default: `2026-08-01`). |
+| `NOT_FOUND_HANDLING` | Asset 404 handling (default: `single-page-application`). |
 
 ## GitHub Secrets / Variables
 
@@ -23,6 +27,7 @@
 | `CLOUDFLARE_API_TOKEN` | Secret | dash.cloudflare.com → Profile → API Tokens → Create Token (Edit Workers) |
 | `CLOUDFLARE_ACCOUNT_ID` | Secret | Cloudflare Dashboard → Right sidebar |
 | `D1_DATABASE_ID` | Variable | Workers & Pages → D1 → Database ID |
+| `R2_BUCKET_ID` | Variable | Workers & Pages → R2 → Bucket Name / ID |
 
 ## Conventions (Not configurable)
 
@@ -30,5 +35,4 @@
 |---|---|
 | Go Entry | `edge/main.go` |
 | Public Assets | `web/public/` |
-| Pages Functions | `functions/` |
-| Worker Artifacts | `.build/` |
+| Build Artifacts | `.build/` |

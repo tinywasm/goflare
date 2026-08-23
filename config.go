@@ -11,16 +11,28 @@ import (
 )
 
 const (
-	EnvKeyProjectName    = "PROJECT_NAME"
-	EnvKeyAccountID      = "CLOUDFLARE_ACCOUNT_ID"
-	EnvKeyWorkerName     = "WORKER_NAME"
-	EnvKeyDomain         = "DOMAIN"
-	EnvKeyCompilerMode   = "COMPILER_MODE"
-	EnvKeyD1DatabaseID   = "D1_DATABASE_ID"
-	EnvKeyD1DatabaseName = "D1_DATABASE_NAME"
-	EnvKeyR2BucketID     = "R2_BUCKET_ID"
-	EnvKeyR2BucketName   = "R2_BUCKET_NAME"
+	EnvKeyProjectName       = "PROJECT_NAME"
+	EnvKeyAccountID         = "CLOUDFLARE_ACCOUNT_ID"
+	EnvKeyWorkerName        = "WORKER_NAME"
+	EnvKeyDomain            = "DOMAIN"
+	EnvKeyCompilerMode      = "COMPILER_MODE"
+	EnvKeyD1DatabaseID      = "D1_DATABASE_ID"
+	EnvKeyD1DatabaseName    = "D1_DATABASE_NAME"
+	EnvKeyR2BucketID        = "R2_BUCKET_ID"
+	EnvKeyR2BucketName      = "R2_BUCKET_NAME"
+	EnvKeyCompatibilityDate = "COMPATIBILITY_DATE"
+	EnvKeyNotFoundHandling  = "NOT_FOUND_HANDLING"
+
+	DefaultCompatibilityDate = "2026-08-01"
+	DefaultNotFoundHandling = "single-page-application"
+	HTMLHandlingDefault      = "auto-trailing-slash"
 )
+
+// WorkerFirstRoutes son los prefijos que Cloudflare debe enviar al Worker antes
+// que a los assets estaticos. No es configuracion del proyecto: /api/ es la
+// convencion de rutas de tinywasm/router y /oauth/ lo monta tinywasm/user. Un
+// proyecto que use el ecosistema queda correcto sin declarar nada.
+var WorkerFirstRoutes = []string{"/api/*", "/oauth/*"}
 
 // LoadConfigFromEnv reads a .env file and populates Config.
 // Falls back to OS environment variables if .env path is empty or does not exist.
@@ -142,9 +154,6 @@ func (c *Config) applyDefaults() {
 	if c.OutputDir == "" {
 		c.OutputDir = ".build/"
 	}
-	if c.FunctionsDir == "" {
-		c.FunctionsDir = "functions"
-	}
 	if c.CompilerMode == "" {
 		c.CompilerMode = "S"
 	}
@@ -162,4 +171,18 @@ func (c *Config) applyDefaults() {
 			c.PublicDir = "web/public"
 		}
 	}
+}
+
+func (g *Goflare) compatibilityDate() string {
+	if v := os.Getenv(EnvKeyCompatibilityDate); v != "" {
+		return v
+	}
+	return DefaultCompatibilityDate
+}
+
+func (g *Goflare) notFoundHandling() string {
+	if v := os.Getenv(EnvKeyNotFoundHandling); v != "" {
+		return v
+	}
+	return DefaultNotFoundHandling
 }

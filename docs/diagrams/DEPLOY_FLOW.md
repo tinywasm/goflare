@@ -9,42 +9,35 @@ sequenceDiagram
     G->>ENV: os.Getenv("CLOUDFLARE_API_TOKEN")
     ENV-->>G: Token string
 
-    alt Target: Worker standalone (cfg.Entry set AND no .wasm/.mjs in FunctionsDir)
-        G->>CF: PUT /accounts/:id/workers/scripts/:name (Multipart: edge.js + edge.wasm)
-        CF-->>G: 200 OK
-        G->>CF: GET /accounts/:id/workers/subdomain
-        CF-->>G: subdomain string
-        Note over G: URL: https://WORKER_NAME.subdomain.workers.dev
+    alt Has Public Assets (cfg.PublicDir set)
+        G->>CF: POST /accounts/:id/workers/scripts/:name/assets-upload-session (Manifest)
+        CF-->>G: Session JWT + Buckets
+        loop Each Bucket
+            G->>CF: POST /workers/assets/upload?base64=true (Auth: Session JWT)
+            CF-->>G: Completion JWT
+        end
     end
 
-    alt Target: Pages (cfg.PublicDir set)
-        G->>CF: GET /accounts/:id/pages/projects/:name
-        alt Project Missing
-            G->>CF: POST /accounts/:id/pages/projects
-        end
-        G->>CF: POST /accounts/:id/pages/projects/:name/uploadToken
-        CF-->>G: JWT
-        loop Each Batch (max 50) — PublicDir files
-            G->>CF: POST /pages/assets/upload (Auth: JWT)
-        end
-        alt FunctionsDir has .wasm/.mjs (Pages Functions project)
-            loop Each Batch (max 50) — FunctionsDir files → /functions/ prefix
-                G->>CF: POST /pages/assets/upload (Auth: JWT)
-            end
-            Note over G: edge.wasm + [[path]].mjs deployed as Pages Function
-        end
-        G->>CF: POST /accounts/:id/pages/projects/:name/deployments (Manifest)
-        CF-->>G: 200 OK
-        Note over G: URL: https://PROJECT_NAME.pages.dev
+    G->>CF: PUT /accounts/:id/workers/scripts/:name (Multipart: metadata + edge.js + edge.wasm)
+    CF-->>G: 200 OK
+
+    opt Custom Domain Set
+        G->>CF: GET /zones
+        G->>CF: PUT /accounts/:id/workers/domains
+    end
+
+    opt Edge Script Deployed
+        G->>CF: GET /api/__goflare_probe
+        Note over G: Verify x-goflare identity header
     end
 
     G->>User: Deployment Summary
 ```
 
-## Regla: Worker vs Pages Functions
+## Regla: Despliegue único
 
 | Condición | Comportamiento |
 |---|---|
-| `cfg.Entry != ""` + NO hay `.wasm`/`.mjs` en `FunctionsDir` | `DeployWorker` (Worker standalone) |
-| `cfg.Entry != ""` + SÍ hay `.wasm`/`.mjs` en `FunctionsDir` | Solo `DeployPages` (edge como Pages Function) |
-| Solo `cfg.PublicDir` | Solo `DeployPages` sin Functions |
+| Solo `cfg.PublicDir` | Assets subidos + Worker sin `main_module` |
+| Solo `cfg.Entry` | Script Worker (`edge.js` + `edge.wasm`) sin key `assets` |
+| Ambos (`cfg.Entry` + `cfg.PublicDir`) | Assets subidos + Script Worker con `run_worker_first` |

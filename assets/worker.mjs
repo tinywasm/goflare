@@ -45,7 +45,10 @@ async function run(ctx) {
 async function fetch(req, env, ctx) {
   const binding = {};
   await run(createRuntimeContext({ env, ctx, binding }));
-  return binding.handleRequest(req);
+  const res = await binding.handleRequest(req);
+  const out = new Response(res.body, res);
+  out.headers.set("x-goflare", "__GOFLARE_VERSION__");
+  return out;
 }
 
 async function scheduled(event, env, ctx) {
@@ -60,17 +63,8 @@ async function queue(batch, env, ctx) {
   return binding.handleQueueMessageBatch(batch);
 }
 
-// onRequest handles request to Cloudflare Pages
-async function onRequest(ctx) {
-  const binding = {};
-  const { request, env } = ctx;
-  await run(createRuntimeContext({ env, ctx, binding }));
-  return binding.handleRequest(request);
-}
-
 export default {
   fetch,
   scheduled,
   queue,
-  onRequest,
 };
