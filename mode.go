@@ -16,7 +16,7 @@ const (
 	ImportEdge    = "github.com/tinywasm/goflare/edge"
 	ImportWorkers = "github.com/tinywasm/goflare/workers"
 
-	ErrNoKnownImport = "cannot infer mode: edge/main.go imports neither " + ImportEdge + " (pages-functions) nor " + ImportWorkers + " (workers)"
+	ErrNoKnownImport = "cannot infer mode: edge/main.go imports neither " + ImportEdge + " nor " + ImportWorkers
 )
 
 // validateEntry confirms that edge/main.go imports at least one of the known runtime packages.

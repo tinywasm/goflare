@@ -24,7 +24,7 @@ const (
 	EnvKeyNotFoundHandling  = "NOT_FOUND_HANDLING"
 
 	DefaultCompatibilityDate = "2026-08-01"
-	DefaultNotFoundHandling = "single-page-application"
+	DefaultNotFoundHandling  = "single-page-application"
 	HTMLHandlingDefault      = "auto-trailing-slash"
 )
 
