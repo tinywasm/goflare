@@ -15,7 +15,6 @@ require (
 	github.com/tinywasm/sqlt v0.0.8
 	github.com/tinywasm/storage v0.0.2
 	github.com/tinywasm/tinygo v1.0.0
-	lukechampine.com/blake3 v1.4.1
 )
 
 require (
@@ -35,7 +34,6 @@ require (
 )
 
 require (
-	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/tdewolff/parse/v2 v2.8.11 // indirect
 	github.com/tinywasm/context v0.0.18 // indirect
 	github.com/tinywasm/css v0.4.15 // indirect

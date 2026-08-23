@@ -6,30 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 )
-
-// hasFunctionsArtifacts reports whether dir contains compiled Pages Function
-// artifacts (.wasm or .mjs files), indicating this is a Pages Functions project
-// rather than a standalone Worker deployment.
-func hasFunctionsArtifacts(dir string) bool {
-	if dir == "" {
-		return false
-	}
-	found := false
-	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil || found {
-			return nil
-		}
-		ext := filepath.Ext(d.Name())
-		if ext == ".wasm" || ext == ".mjs" {
-			found = true
-		}
-		return nil
-	})
-	return found
-}
 
 // RunAuth runs the auth command.
 func RunAuth(envPath string, out io.Writer, check bool) error {
@@ -113,50 +90,26 @@ func RunDeploy(envPath string, out io.Writer) error {
 		HttpClient: http.DefaultClient,
 	}
 
-	var results []DeployResult
-
-	// Deploy as standalone Worker only when Entry is set AND no Pages Functions
-	// artifacts exist. When FunctionsDir has compiled files (e.g. edge.wasm +
-	// [[path]].mjs), the edge function is deployed as a Pages Function via
-	// DeployPages — calling DeployWorker would look for a non-existent edge.js.
-	if cfg.Entry != "" && !hasFunctionsArtifacts(cfg.FunctionsDir) {
-		err := g.DeployWorker()
-
-		subdomain := "<your-subdomain>"
-		if err == nil {
-			subdomain = g.getWorkerSubdomain(client)
-		}
-
-		results = append(results, DeployResult{
-			Target: "Worker",
-			URL:    fmt.Sprintf("https://%s.%s.workers.dev", cfg.WorkerName, subdomain),
-			Err:    err,
-		})
+	subdomain := g.getWorkerSubdomain(client)
+	url := fmt.Sprintf("https://%s.%s.workers.dev", cfg.WorkerName, subdomain)
+	if cfg.Domain != "" {
+		url = "https://" + cfg.Domain
 	}
 
-	if cfg.PublicDir != "" {
-		if err := g.ValidateDeployScopes(client); err != nil {
-			return err
-		}
+	err = g.Deploy()
 
-		err := g.DeployPages()
-		url := fmt.Sprintf("https://%s.pages.dev", cfg.ProjectName)
-		if cfg.Domain != "" {
-			url = "https://" + cfg.Domain
-		}
-		results = append(results, DeployResult{
-			Target: "Pages",
+	results := []DeployResult{
+		{
+			Target: "Worker",
 			URL:    url,
 			Err:    err,
-		})
+		},
 	}
 
 	g.WriteSummary(out, results)
 
-	for _, res := range results {
-		if res.Err != nil {
-			return fmt.Errorf("deploy failed")
-		}
+	if err != nil {
+		return fmt.Errorf("deploy failed: %w", err)
 	}
 
 	return nil

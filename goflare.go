@@ -3,13 +3,26 @@
 package goflare
 
 import (
-	"errors"
-	"fmt"
 	"os"
+	"runtime/debug"
 	"time"
 
 	"github.com/tinywasm/sitec"
 )
+
+// HeaderIdentity es la cabecera con la que un Worker desplegado por goflare se
+// identifica. Su presencia prueba que la respuesta la produjo el Worker y no la
+// capa de archivos estaticos.
+const HeaderIdentity = "x-goflare"
+
+// identityValue devuelve la version del modulo goflare en ejecucion, o "dev"
+// cuando no hay informacion de build (checkout local).
+func identityValue() string {
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		return bi.Main.Version
+	}
+	return "dev"
+}
 
 // SiteOutput es el sitio ya compilado, listo para volcarse a disco.
 type SiteOutput interface {
@@ -39,7 +52,7 @@ type Config struct {
 	WorkerName  string // WORKER_NAME  (default: ProjectName + "-worker")
 
 	// Routing
-	Domain string // DOMAIN (optional — custom domain for Pages)
+	Domain string // DOMAIN (optional — custom domain)
 
 	// Build inputs (conventions, not configurable via .env)
 	Entry     string // ENTRY      (path to main Go file, empty = Pages only)
@@ -47,9 +60,6 @@ type Config struct {
 
 	// Build output (not in .env — always .build/)
 	OutputDir string // default: ".build/"
-
-	// Pages Functions output (sibling to web/public/, committed to git)
-	FunctionsDir string // default: "functions"
 
 	// Compiler
 	CompilerMode string // "S" | "M" | "L"  default: "S"
@@ -66,6 +76,7 @@ type Goflare struct {
 	Config       *Config           // exported so CLI can read it after LoadConfigFromEnv
 	log          func(message ...any)
 	BaseURL      string
+	SiteURL      string        // override public URL for testing probe
 	stagingDir   string        // temporary directory for build artifacts
 	RetryBackoff time.Duration // base duration for retries (defaults to 1s)
 }
@@ -132,26 +143,4 @@ func (g *Goflare) Logger(messages ...any) {
 // mode: "L" (Large fast/Go), "M" (Medium TinyGo debug), "S" (Small TinyGo production)
 func (g *Goflare) SetCompilerMode(newValue string) {
 	g.Config.CompilerMode = newValue
-}
-
-func (g *Goflare) Deploy() error {
-	var buildErrors []error
-
-	if g.Config.Entry != "" {
-		if err := g.DeployWorker(); err != nil {
-			buildErrors = append(buildErrors, fmt.Errorf("worker deploy failed: %w", err))
-		}
-	}
-
-	if g.Config.PublicDir != "" {
-		if err := g.DeployPages(); err != nil {
-			buildErrors = append(buildErrors, fmt.Errorf("pages deploy failed: %w", err))
-		}
-	}
-
-	if len(buildErrors) > 0 {
-		return errors.Join(buildErrors...)
-	}
-
-	return nil
 }

@@ -4,10 +4,7 @@ package goflare
 
 import (
 	"bytes"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -16,8 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"lukechampine.com/blake3"
 )
 
 const cfAPIBase = "https://api.cloudflare.com/client/v4"
@@ -84,192 +79,6 @@ func (c *CfClient) do(method, path string, body io.Reader) ([]byte, error) {
 	return parseCFResponse(method, path, resp)
 }
 
-// DeployPages uploads the Pages build output (from config.OutputDir) to Cloudflare Pages.
-// validateDeployScopes confirms that the token has the necessary permissions to
-// manage Pages projects and deployments.
-func (g *Goflare) ValidateDeployScopes(client *CfClient) error {
-	path := fmt.Sprintf("/accounts/%s/pages/projects", g.Config.AccountID)
-	if _, err := client.get(path); err != nil {
-		return fmt.Errorf(
-			"the token cannot access Pages on account %s.\n"+
-				"  - Verify permission Account → Cloudflare Pages → Edit\n"+
-				"  - Verify that CLOUDFLARE_ACCOUNT_ID is correct\n"+
-				"Detail: %w", g.Config.AccountID, err)
-	}
-	return nil
-}
-
-func (g *Goflare) createPagesProject(client *CfClient) error {
-	g.Logger("Pages project not found — creating", g.Config.ProjectName)
-	createPath := fmt.Sprintf("/accounts/%s/pages/projects", g.Config.AccountID)
-	body, _ := json.Marshal(map[string]string{
-		"name":              g.Config.ProjectName,
-		"production_branch": "main",
-	})
-	_, err := client.post(createPath, body)
-	if err != nil {
-		var apiErr *cfError
-		if errors.As(err, &apiErr) && apiErr.alreadyExists() {
-			return nil
-		}
-		return fmt.Errorf("failed to create Pages project: %w", err)
-	}
-	return nil
-}
-
-func (g *Goflare) DeployPages() error {
-	token, err := g.token()
-	if err != nil {
-		return err
-	}
-
-	client := &CfClient{
-		Token:      token,
-		BaseURL:    g.BaseURL,
-		HttpClient: http.DefaultClient,
-	}
-
-	// 2. Ensure Pages project exists
-	projectPath := fmt.Sprintf("/accounts/%s/pages/projects/%s", g.Config.AccountID, g.Config.ProjectName)
-	_, err = client.get(projectPath)
-	if err != nil {
-		var apiErr *cfError
-		notFound := errors.As(err, &apiErr) && (apiErr.Status == http.StatusNotFound || apiErr.Code == 8000007)
-		if !notFound {
-			return fmt.Errorf("failed to check Pages project: %w", err)
-		}
-		if err := g.createPagesProject(client); err != nil {
-			return err
-		}
-	}
-
-	// 3. Get upload JWT — retry because a newly created project takes time to be ready.
-	tokenPath := fmt.Sprintf("/accounts/%s/pages/projects/%s/upload-token", g.Config.AccountID, g.Config.ProjectName)
-	var tokenResp []byte
-	err = g.retry(5, g.RetryBackoff, func() error {
-		var e error
-		tokenResp, e = client.get(tokenPath)
-		return e
-	})
-	if err != nil {
-		return fmt.Errorf("failed to get upload Token: %w", err)
-	}
-	var tokenData struct {
-		JWT string `json:"jwt"`
-	}
-	if err := json.Unmarshal(tokenResp, &tokenData); err != nil {
-		return fmt.Errorf("failed to parse upload Token: %w", err)
-	}
-
-	// 4. Walk PublicDir and FunctionsDir, collect all files for the manifest.
-	// FunctionsDir (e.g. "functions/") contains the compiled Pages Functions
-	// (edge.wasm + [[path]].mjs) and must be uploaded alongside static assets.
-	distDir := g.Config.PublicDir
-	if _, err := os.Stat(distDir); os.IsNotExist(err) {
-		return fmt.Errorf("public directory missing: %s", distDir)
-	}
-
-	var files []uploadFile
-	manifest := make(map[string]string)
-
-	collectDir := func(dir, prefix string) error {
-		return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if info.IsDir() {
-				return nil
-			}
-			rel, _ := filepath.Rel(dir, path)
-			relPath := prefix + filepath.ToSlash(rel)
-			content, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			// Cloudflare Pages asset key: blake3(base64(content)+ext).hex()[:32]
-			// (matches wrangler; a plain sha256 hash is rejected with HTTP 500 code 1101).
-			b64 := base64.StdEncoding.EncodeToString(content)
-			ext := strings.TrimPrefix(filepath.Ext(path), ".")
-			sum := blake3.Sum256([]byte(b64 + ext))
-			hashHex := hex.EncodeToString(sum[:])[:32]
-			files = append(files, uploadFile{
-				Key:      hashHex,
-				Value:    b64,
-				Metadata: map[string]string{"contentType": detectContentType(path)},
-				Base64:   true,
-			})
-			manifest[relPath] = hashHex
-			return nil
-		})
-	}
-
-	if err := collectDir(distDir, "/"); err != nil {
-		return err
-	}
-
-	// Include Pages Functions artifacts if present.
-	if g.Config.FunctionsDir != "" {
-		if _, statErr := os.Stat(g.Config.FunctionsDir); statErr == nil {
-			if err := collectDir(g.Config.FunctionsDir, "/functions/"); err != nil {
-				return err
-			}
-		}
-	}
-
-	if len(files) == 0 {
-		return fmt.Errorf("no files found to upload in %s", distDir)
-	}
-
-	// 5. Upload files in batches of 50
-	uploadClient := &CfClient{
-		Token:      tokenData.JWT,
-		BaseURL:    g.BaseURL,
-		HttpClient: http.DefaultClient,
-	}
-	for i := 0; i < len(files); i += 50 {
-		end := i + 50
-		if end > len(files) {
-			end = len(files)
-		}
-		batch := files[i:end]
-		batchJSON, _ := json.Marshal(batch)
-		_, err = uploadClient.post("/pages/assets/upload", batchJSON)
-		if err != nil {
-			return fmt.Errorf("failed to upload assets batch: %w", err)
-		}
-	}
-
-	// 6. Create deployment — Cloudflare expects multipart/form-data with a
-	// "manifest" field (JSON map of path->hash), not a JSON body (else HTTP 400 code 8000096).
-	deployPath := fmt.Sprintf("/accounts/%s/pages/projects/%s/deployments", g.Config.AccountID, g.Config.ProjectName)
-	manifestJSON, _ := json.Marshal(manifest)
-	var deployForm bytes.Buffer
-	mw := multipart.NewWriter(&deployForm)
-	mw.WriteField("manifest", string(manifestJSON))
-	mw.WriteField("branch", "main")
-	mw.Close()
-	_, err = client.postMultipart(deployPath, &deployForm, mw.FormDataContentType())
-	if err != nil {
-		return fmt.Errorf("failed to create deployment: %w", err)
-	}
-
-	// 7. Configure domain
-	if g.Config.Domain != "" {
-		if err := g.configurePagesDomain(client); err != nil {
-			g.Logger("Warning: failed to configure domain:", err)
-		}
-	}
-
-	return nil
-}
-
-type uploadFile struct {
-	Key      string            `json:"key"`
-	Value    string            `json:"value"`
-	Metadata map[string]string `json:"metadata"`
-	Base64   bool              `json:"base64"`
-}
-
 func detectContentType(filename string) string {
 	ext := strings.ToLower(filepath.Ext(filename))
 	switch ext {
@@ -298,22 +107,6 @@ func detectContentType(filename string) string {
 	}
 }
 
-func (g *Goflare) configurePagesDomain(client *CfClient) error {
-	path := fmt.Sprintf("/accounts/%s/pages/projects/%s/domains", g.Config.AccountID, g.Config.ProjectName)
-	body := map[string]string{"name": g.Config.Domain}
-	bodyJSON, _ := json.Marshal(body)
-	_, err := client.post(path, bodyJSON)
-	if err != nil {
-		var apiErr *cfError
-		if errors.As(err, &apiErr) && apiErr.alreadyExists() {
-			return nil
-		}
-		return err
-	}
-	return nil
-}
-
-// DeployWorker uploads the Worker build output to Cloudflare Workers.
 func (g *Goflare) getWorkerSubdomain(client *CfClient) string {
 	path := fmt.Sprintf("/accounts/%s/workers/subdomain", g.Config.AccountID)
 	data, err := client.get(path)
@@ -331,29 +124,89 @@ func (g *Goflare) getWorkerSubdomain(client *CfClient) string {
 	return result.Result.Subdomain
 }
 
-func (g *Goflare) DeployWorker() error {
+func hasFilesInDir(dir string) bool {
+	if dir == "" {
+		return false
+	}
+	info, err := os.Stat(dir)
+	if err != nil || !info.IsDir() {
+		return false
+	}
+	hasFiles := false
+	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err == nil && !info.IsDir() {
+			hasFiles = true
+		}
+		return nil
+	})
+	return hasFiles
+}
+
+// Deploy uploads the site to Cloudflare as a Worker with static assets.
+func (g *Goflare) Deploy() error {
 	token, err := g.token()
 	if err != nil {
 		return err
 	}
 
-	edgeJs := filepath.Join(g.Config.OutputDir, "edge.js")
-	edgeWasm := filepath.Join(g.Config.OutputDir, "edge.wasm")
+	client := &CfClient{
+		Token:      token,
+		BaseURL:    g.BaseURL,
+		HttpClient: http.DefaultClient,
+	}
 
-	files := []string{edgeJs, edgeWasm}
-	for _, f := range files {
-		if _, err := os.Stat(f); os.IsNotExist(err) {
-			return fmt.Errorf("missing artifact: %s", filepath.Base(f))
+	hasAssets := hasFilesInDir(g.Config.PublicDir)
+	edgeJsPath := filepath.Join(g.Config.OutputDir, "edge.js")
+	edgeWasmPath := filepath.Join(g.Config.OutputDir, "edge.wasm")
+
+	hasScript := false
+	if _, err := os.Stat(edgeJsPath); err == nil {
+		hasScript = true
+		if _, err := os.Stat(edgeWasmPath); os.IsNotExist(err) {
+			return fmt.Errorf("missing artifact: edge.wasm")
 		}
+	}
+
+	if !hasAssets && !hasScript {
+		return fmt.Errorf("nothing to deploy: neither %s nor %s/edge.js exist", g.Config.PublicDir, g.Config.OutputDir)
+	}
+
+	var completionToken string
+	if hasAssets {
+		manifest, byHash, err := g.buildAssetManifest(g.Config.PublicDir)
+		if err != nil {
+			return err
+		}
+		token, err := g.uploadAssets(client, manifest, byHash)
+		if err != nil {
+			return err
+		}
+		completionToken = token
 	}
 
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
 
-	// metadata
-	metadata := map[string]any{"main_module": "edge.js"}
-	var bindings []any
+	metadata := map[string]any{
+		"compatibility_date": g.compatibilityDate(),
+	}
 
+	if hasScript {
+		metadata["main_module"] = "edge.js"
+	}
+
+	if hasAssets {
+		metadata["assets"] = map[string]any{
+			"jwt": completionToken,
+			"config": map[string]any{
+				"html_handling":      HTMLHandlingDefault,
+				"not_found_handling": g.notFoundHandling(),
+				"run_worker_first":   WorkerFirstRoutes,
+			},
+		}
+	}
+
+	var bindings []any
 	if g.Config.D1DatabaseID != "" {
 		dbName := g.Config.D1DatabaseName
 		if dbName == "" {
@@ -374,7 +227,7 @@ func (g *Goflare) DeployWorker() error {
 		bindings = append(bindings, map[string]string{
 			"type":        "r2_bucket",
 			"name":        bucketName,
-			"bucket_name": g.Config.R2BucketID, // API uses bucket_name for the ID/physical name
+			"bucket_name": g.Config.R2BucketID,
 		})
 	}
 
@@ -387,27 +240,134 @@ func (g *Goflare) DeployWorker() error {
 		return err
 	}
 
-	// edge.js
-	if err := addFilePart(mw, "edge.js", edgeJs); err != nil {
-		return err
+	if hasScript {
+		if err := addFilePart(mw, "edge.js", edgeJsPath); err != nil {
+			return err
+		}
+		if err := addFilePart(mw, "edge.wasm", edgeWasmPath); err != nil {
+			return err
+		}
 	}
 
-	// edge.wasm
-	if err := addFilePart(mw, "edge.wasm", edgeWasm); err != nil {
+	if err := mw.Close(); err != nil {
 		return err
-	}
-
-	mw.Close()
-
-	client := &CfClient{
-		Token:      token,
-		BaseURL:    g.BaseURL,
-		HttpClient: http.DefaultClient,
 	}
 
 	path := fmt.Sprintf("/accounts/%s/workers/scripts/%s", g.Config.AccountID, g.Config.WorkerName)
-	_, err = client.putMultipart(path, &buf, mw.FormDataContentType())
-	return err
+	if _, err := client.putMultipart(path, &buf, mw.FormDataContentType()); err != nil {
+		return err
+	}
+
+	if g.Config.Domain != "" {
+		if err := g.configureWorkerDomain(client); err != nil {
+			g.Logger("Warning: failed to configure domain:", err)
+		}
+	}
+
+	if hasScript {
+		if err := g.verifyProbe(client); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (g *Goflare) configureWorkerDomain(client *CfClient) error {
+	zonesData, err := client.get("/zones")
+	if err != nil {
+		return fmt.Errorf("failed to fetch zones: %w", err)
+	}
+
+	var zones []struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(zonesData, &zones); err != nil {
+		return fmt.Errorf("failed to parse zones response: %w", err)
+	}
+
+	var matchedZoneID string
+	var longestMatchLen int
+
+	domain := g.Config.Domain
+	for _, zone := range zones {
+		if domain == zone.Name || strings.HasSuffix(domain, "."+zone.Name) {
+			if len(zone.Name) > longestMatchLen {
+				longestMatchLen = len(zone.Name)
+				matchedZoneID = zone.ID
+			}
+		}
+	}
+
+	if matchedZoneID == "" {
+		return fmt.Errorf("no zone in the account matches domain %s", domain)
+	}
+
+	domainPath := fmt.Sprintf("/accounts/%s/workers/domains", g.Config.AccountID)
+	body, _ := json.Marshal(map[string]string{
+		"environment": "production",
+		"hostname":    domain,
+		"service":     g.Config.WorkerName,
+		"zone_id":     matchedZoneID,
+	})
+
+	if _, err := client.put(domainPath, body); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g *Goflare) verifyProbe(client *CfClient) error {
+	baseURL := g.SiteURL
+	if baseURL == "" && g.Config.Domain != "" {
+		baseURL = "https://" + g.Config.Domain
+	}
+	if baseURL == "" {
+		subdomain := g.getWorkerSubdomain(client)
+		if subdomain != "" && subdomain != "<your-subdomain>" {
+			baseURL = fmt.Sprintf("https://%s.%s.workers.dev", g.Config.WorkerName, subdomain)
+		}
+	}
+
+	if baseURL == "" {
+		g.Logger("Skipping probe verification: public URL could not be determined")
+		return nil
+	}
+
+	probeURL := strings.TrimSuffix(baseURL, "/") + "/api/__goflare_probe"
+
+	hc := client.HttpClient
+	if hc == nil {
+		hc = http.DefaultClient
+	}
+
+	err := g.retry(5, g.RetryBackoff, func() error {
+		req, err := http.NewRequest(http.MethodGet, probeURL, nil)
+		if err != nil {
+			return err
+		}
+		resp, err := hc.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		if resp.Header.Get(HeaderIdentity) != "" {
+			return nil
+		}
+		return fmt.Errorf("missing %s header", HeaderIdentity)
+	})
+
+	if err != nil {
+		return fmt.Errorf(
+			"deploy verification failed: %s responded without the %s header — "+
+				"the files were uploaded but the Worker is not serving requests",
+			probeURL, HeaderIdentity)
+	}
+
+	return nil
 }
 
 // ── internal helpers ──────────────────────────────────────────────────────────
@@ -437,15 +397,6 @@ func (e *cfError) Error() string {
 		return fmt.Sprintf("CF API %s → HTTP %d: %s", e.Path, e.Status, e.Message)
 	}
 	return fmt.Sprintf("CF API %s → HTTP %d, success=false, body: %s", e.Path, e.Status, e.Body)
-}
-
-func (e *cfError) alreadyExists() bool {
-	for _, x := range e.Errors {
-		if x.Code == 8000009 || x.Code == 8000045 || strings.Contains(x.Message, "already exists") {
-			return true
-		}
-	}
-	return false
 }
 
 func parseCFResponse(method, path string, resp *http.Response) (json.RawMessage, error) {

@@ -11,15 +11,7 @@ import (
 	"github.com/tinywasm/sitec"
 )
 
-// Build orchestrates the build pipeline as a method.
-//
-// Mode is inferred from edge/main.go imports (D11):
-//   - pages-functions: edge/main.go imports github.com/tinywasm/goflare/edge
-//     → output functions/[[path]].mjs + functions/edge.wasm
-//   - workers:         edge/main.go imports github.com/tinywasm/goflare/workers
-//     → output .build/edge.js + .build/edge.wasm (legacy)
-//   - pages (static):  no edge/main.go but PublicDir exists
-//     → only static + optional frontend wasm
+// Build orchestrates the build pipeline.
 func (g *Goflare) Build() error {
 	if g.stagingDir != g.Config.OutputDir {
 		defer os.RemoveAll(g.stagingDir)
@@ -29,44 +21,21 @@ func (g *Goflare) Build() error {
 		return errors.New("nothing to build: both Entry and PublicDir are empty")
 	}
 
-	mode := ModeUnknown
-	if g.Config.Entry != "" {
-		m, err := inferMode(g.Config.Entry, g.Config.PublicDir)
-		if err != nil {
-			return fmt.Errorf("mode detection failed: %w", err)
-		}
-		mode = m
-	} else if g.Config.PublicDir != "" {
-		mode = ModePagesStatic
-	}
-
 	var buildErrors []error
 
-	switch mode {
-	case ModePagesFunctions:
-		if err := g.buildPagesFunctions(); err != nil {
-			buildErrors = append(buildErrors, fmt.Errorf("pages-functions build failed: %w", err))
+	if g.Config.Entry != "" {
+		if err := validateEntry(g.Config.Entry); err != nil {
+			return fmt.Errorf("mode detection failed: %w", err)
 		}
-		if g.Config.PublicDir != "" {
-			if err := g.buildPages(); err != nil {
-				buildErrors = append(buildErrors, fmt.Errorf("pages build failed: %w", err))
-			}
-		}
-	case ModeWorkers:
 		if err := g.buildWorker(); err != nil {
 			buildErrors = append(buildErrors, fmt.Errorf("worker build failed: %w", err))
 		}
-		if g.Config.PublicDir != "" {
-			if err := g.buildPages(); err != nil {
-				buildErrors = append(buildErrors, fmt.Errorf("pages build failed: %w", err))
-			}
-		}
-	case ModePagesStatic:
+	}
+
+	if g.Config.PublicDir != "" {
 		if err := g.buildPages(); err != nil {
 			buildErrors = append(buildErrors, fmt.Errorf("pages build failed: %w", err))
 		}
-	default:
-		return errors.New("could not determine build mode from edge/main.go imports")
 	}
 
 	if len(buildErrors) > 0 {
@@ -77,7 +46,7 @@ func (g *Goflare) Build() error {
 }
 
 const (
-	// maxWasmSize is the Cloudflare Workers/Pages Free limit for the WASM binary.
+	// maxWasmSize is the Cloudflare Workers Free limit for the WASM binary.
 	// https://developers.cloudflare.com/workers/platform/limits/#worker-size
 	maxWasmSize = 1 * 1024 * 1024 // 1 MiB
 
@@ -111,45 +80,6 @@ func checkWasmSize(path string) error {
 			size, float64(size)/1024,
 		)
 	}
-	return nil
-}
-
-// buildPagesFunctions compiles edge/main.go to functions/edge.wasm and writes the
-// glue bundle functions/[[path]].mjs (catch-all, exports onRequest only).
-//
-// Both outputs end up in the project tree (no .build/ staging visible to the dev)
-// so the dev commits them and CF Git Integration deploys them as-is (D8).
-//
-// Implementation note: sitec.WasmBuilder compiles to memory; we write edge.wasm into staging
-// and then move edge.wasm into functions/.
-func (g *Goflare) buildPagesFunctions() error {
-	if _, err := os.Stat(g.Config.Entry); os.IsNotExist(err) {
-		return fmt.Errorf("entry path does not exist: %s", g.Config.Entry)
-	}
-
-	functionsDir := g.functionsDir()
-	if err := os.MkdirAll(functionsDir, 0755); err != nil {
-		return fmt.Errorf("failed to create functions dir: %w", err)
-	}
-
-	if err := g.generateWasmFile(); err != nil {
-		return err
-	}
-
-	srcWasm := filepath.Join(g.stagingDir, "edge.wasm")
-	dstWasm := filepath.Join(functionsDir, "edge.wasm")
-	if err := moveFile(srcWasm, dstWasm); err != nil {
-		return fmt.Errorf("failed to move edge.wasm to %s: %w", functionsDir, err)
-	}
-
-	if err := checkWasmSize(dstWasm); err != nil {
-		return err
-	}
-
-	if err := g.generatePagesFunctionFile(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
