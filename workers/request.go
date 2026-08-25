@@ -12,10 +12,28 @@ import (
 type Request struct {
 	Method  string
 	URL     string
-	Headers map[string]string
 	jsReq   js.Value
+	headers js.Value
 	body    []byte
 	hasBody bool
+}
+
+// Header returns the value of the named header, or "" if absent. Lookup is
+// case-insensitive, per the Fetch Headers.get() contract — do not "fix" this
+// by lowercasing key yourself; Headers.get() already does the right thing,
+// and double-normalizing invites the exact bug this method replaces (see
+// docs/PLAN.md at the time of this change: Headers.entries() lowercases
+// names for iteration, but .get() matches case-insensitively — reading one
+// as if it behaved like the other silently returned "" for every request).
+func (r *Request) Header(key string) string {
+	if r.headers.IsNull() || r.headers.IsUndefined() {
+		return ""
+	}
+	v := r.headers.Call("get", key)
+	if v.IsNull() || v.IsUndefined() {
+		return ""
+	}
+	return v.String()
 }
 
 // Body returns the raw request body bytes.
@@ -69,26 +87,10 @@ func (r *Request) Body() []byte {
 
 // newRequest reads a JS Fetch Request into a Go Request.
 func newRequest(jsReq js.Value) (*Request, error) {
-	r := &Request{
+	return &Request{
 		Method:  jsReq.Get("method").String(),
 		URL:     jsReq.Get("url").String(),
-		Headers: map[string]string{},
 		jsReq:   jsReq,
-	}
-
-	// Read headers
-	jsHeaders := jsReq.Get("headers")
-	if !jsHeaders.IsNull() && !jsHeaders.IsUndefined() {
-		entries := jsHeaders.Call("entries")
-		for {
-			next := entries.Call("next")
-			if next.Get("done").Bool() {
-				break
-			}
-			val := next.Get("value")
-			r.Headers[val.Index(0).String()] = val.Index(1).String()
-		}
-	}
-
-	return r, nil
+		headers: jsReq.Get("headers"),
+	}, nil
 }

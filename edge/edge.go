@@ -25,7 +25,7 @@ func (c *wasmContext) Method() string { return c.req.Method }
 func (c *wasmContext) Path() string   { return c.path }
 func (c *wasmContext) Body() []byte   { return c.req.Body() }
 func (c *wasmContext) GetHeader(key string) string {
-	return c.req.Headers[key]
+	return c.req.Header(key)
 }
 func (c *wasmContext) SetHeader(key, value string) {
 	c.res.Header()[key] = value
@@ -105,7 +105,7 @@ func (c *wasmContext) SetCookie(cookie router.Cookie) {
 }
 
 func (c *wasmContext) Cookie(name string) (router.Cookie, bool) {
-	h := c.req.Headers["Cookie"]
+	h := c.req.Header("Cookie")
 	if h == "" {
 		return router.Cookie{}, false
 	}
@@ -113,34 +113,32 @@ func (c *wasmContext) Cookie(name string) (router.Cookie, bool) {
 	// Manual parsing of "Cookie" header: name1=val1; name2=val2
 	// Minimal implementation: search for "name="
 	// Note: we can't use strings.Split (stdlib prohibited)
-	// We'll do a simple scan.
-	b := []byte(h)
-	nb := []byte(name + "=")
-	for i := 0; i <= len(b)-len(nb); i++ {
-		match := true
-		for j := 0; j < len(nb); j++ {
-			if b[i+j] != nb[j] {
-				match = false
-				break
-			}
+	// We'll do a simple scan directly over the string — Go strings already
+	// index by byte, so copying to []byte first only allocated a throwaway
+	// copy for no benefit.
+	needle := name + "="
+	for i := 0; i <= len(h)-len(needle); i++ {
+		if h[i:i+len(needle)] != needle {
+			continue
 		}
-		if match && (i == 0 || b[i-1] == ' ' || b[i-1] == ';') {
-			start := i + len(nb)
-			end := start
-			for end < len(b) && b[end] != ';' {
-				end++
-			}
-			val := string(b[start:end])
-			return router.Cookie{Name: name, Value: val}, true
+		if i != 0 && h[i-1] != ' ' && h[i-1] != ';' {
+			continue
 		}
+		start := i + len(needle)
+		end := start
+		for end < len(h) && h[end] != ';' {
+			end++
+		}
+		return router.Cookie{Name: name, Value: h[start:end]}, true
 	}
 
 	return router.Cookie{}, false
 }
 
 type wasmRoute struct {
-	info router.RouteInfo
-	h    router.HandlerFunc
+	info    router.RouteInfo
+	h       router.HandlerFunc
+	wrapped router.HandlerFunc // set once by compile(), never per request
 }
 
 func (r *wasmRoute) Requires(resource model.Resource, action model.Action) router.Route {
@@ -364,11 +362,36 @@ func Validate(r router.Router) {
 	}
 }
 
+// compile wraps every route's handler with the middleware chain exactly
+// once. gateAndServe used to do this on every request — a closure
+// allocation per middleware, per request — even though neither a route's
+// handler nor r.middlewares ever changes after Serve() starts. Now there is
+// nothing left to rebuild: dispatch calls the frozen wrapped handler
+// directly.
+func (r *wasmRouter) compile() {
+	for _, rt := range r.routes {
+		if rt.h == nil {
+			continue // static file / directory routes are served elsewhere
+		}
+		h := rt.h
+		for i := len(r.middlewares) - 1; i >= 0; i-- {
+			h = r.middlewares[i](h)
+		}
+		rt.wrapped = h
+	}
+}
+
+// ExportCompile exports compile for testing.
+func ExportCompile(r router.Router) {
+	r.(*wasmRouter).compile()
+}
+
 func Serve(r router.Router) {
 	wr := r.(*wasmRouter)
 
 	// Loudly, at startup — never a silent 403 in production.
 	Validate(wr)
+	wr.compile()
 
 	workers.Handle(func(res *workers.Response, req *workers.Request) {
 		pathname := js.Global().Get("URL").New(req.URL).Get("pathname").String()
@@ -421,11 +444,11 @@ func (r *wasmRouter) gateAndServe(ctx router.Context) {
 	// Middleware runs BEHIND the gate: a rejected request must not execute the consumer's
 	// logic — decoding a body or hitting a database for a caller about to get a 403 is work
 	// (and attack surface) handed to somebody already denied.
-	h := route.h
-	for i := len(r.middlewares) - 1; i >= 0; i-- {
-		h = r.middlewares[i](h)
+	if route.wrapped != nil {
+		route.wrapped(ctx)
+	} else if route.h != nil {
+		route.h(ctx)
 	}
-	h(ctx)
 }
 
 var _ router.Router = (*wasmRouter)(nil)
