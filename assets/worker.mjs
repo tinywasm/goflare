@@ -57,14 +57,26 @@ async function start(env) {
   // permanent hang into one named error, and every later request fails fast on
   // the same cached rejection instead of timing out.
   let exitedEarly = false;
-  const settleOnExit = () => {
+  let exitError;
+  const settleOnExit = (err) => {
     exitedEarly = true;
+    exitError = err;
     ready();
   };
-  go.run(instance, createRuntimeContext({ env, binding })).then(settleOnExit, settleOnExit);
+  go.run(instance, createRuntimeContext({ env, binding })).then(
+    () => settleOnExit(undefined),
+    settleOnExit
+  );
 
   await readyPromise;
   if (exitedEarly) {
+    // A rejection carries the real failure — a wasm trap during package
+    // initialization reaches us here and NOWHERE else, because it aborts before
+    // Go can print anything of its own. Rethrow it untouched; replacing it with
+    // a generic message is what makes such a crash undiagnosable.
+    if (exitError !== undefined) {
+      throw exitError;
+    }
     throw new Error(
       "goflare: Go main() returned without registering a request handler — " +
         "check the Worker's logs for the error it printed before returning"
