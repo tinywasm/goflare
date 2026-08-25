@@ -4,7 +4,7 @@ go 1.25.2
 
 require (
 	github.com/tdewolff/minify/v2 v2.24.12
-	github.com/tinywasm/cloudflare v0.0.7
+	github.com/tinywasm/cloudflare v0.0.8
 	github.com/tinywasm/ddl v0.0.12
 	github.com/tinywasm/filetype v0.0.2
 	github.com/tinywasm/fmt v0.25.7
