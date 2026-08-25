@@ -250,7 +250,11 @@
 					// https://github.com/WebAssembly/WASI/blob/main/phases/snapshot/docs.md#fd_write
 					fd_write: function(fd, iovs_ptr, iovs_len, nwritten_ptr) {
 						let nwritten = 0;
-						if (fd == 1) {
+						// fd 1 (stdout) AND fd 2 (stderr). Dropping stderr discards
+						// every Go panic message — including the ones raised during
+						// package init, before main() can log anything itself — and
+						// leaves only an unexplained hang.
+						if (fd == 1 || fd == 2) {
 							for (let iovs_i=0; iovs_i<iovs_len;iovs_i++) {
 								let iov_ptr = iovs_ptr+iovs_i*8; // assuming wasm32
 								let ptr = mem().getUint32(iov_ptr + 0, true);
@@ -264,7 +268,7 @@
 										// write line
 										let line = decoder.decode(new Uint8Array(logLine));
 										logLine = [];
-										console.log(line);
+										if (fd == 2) { console.error(line); } else { console.log(line); }
 									} else {
 										logLine.push(c);
 									}
