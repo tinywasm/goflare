@@ -91,6 +91,23 @@ Tras completar el `PUT`, `goflare` realiza una sonda automática `GET /api/__gof
 
 ---
 
+## Ciclo de vida del Worker
+
+La instancia de Go se crea **una vez por isolate**, no una vez por petición: la
+primera petición paga la instanciación del WASM y el `main()` completo, y todas
+las siguientes reutilizan esa instancia a través de `binding.handleRequest`.
+
+> *`main()` se ejecuta una sola vez. Todo lo que haga — sincronizar el esquema,
+> leer secretos, construir el router — es coste de arranque del isolate, no de
+> cada petición.*
+
+El handshake de arranque viaja por `context.binding.ready`, nunca por una global
+compartida: `wasm_exec_worker.js` sólo aísla la propiedad `context` por
+instancia, así que cualquier otro nombre global es un único objeto compartido por
+todo el isolate.
+
+---
+
 ## Variables de Entorno
 
 | Variable | Descripción | Valor por defecto |

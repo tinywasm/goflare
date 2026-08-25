@@ -48,6 +48,11 @@ GoFlare is a Go library and CLI that bridges the gap between Go source code and 
 - **Internal HTTP Client:** `CfClient` handles direct interaction with Cloudflare API v4.
 - **Worker + Assets Deploy:** Unified deployment via 3-phase Direct Upload (Asset Upload Session -> Chunked Uploads -> Worker Script PUT with metadata and asset JWT).
 
+### 6. Edge Runtime (`assets/worker.mjs`, `assets/runtime.mjs`, `workers/workers.go`)
+- **Lifecycle:** Go/WASM instance is booted **once per isolate** (not per request). `main()` runs once during isolate initialization.
+- **Request Dispatch:** Sequential and concurrent requests reuse the isolate's Go instance via `binding.handleRequest`.
+- **Handshake:** Init signal passes via `context.binding.ready` (instance-scoped door) rather than shared globals.
+
 ## Project Structure
 
 ```

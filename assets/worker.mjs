@@ -1,10 +1,16 @@
 import "./wasm_exec.js";
 import { createRuntimeContext, loadModule } from "./runtime.mjs";
 
-// Cache of the compiled WebAssembly.Module. Named distinctly from the
-// `mod` import injected at bundle scope (import mod from "./edge.wasm"),
-// otherwise the single-module bundle redeclares `mod` (esbuild error).
-let cachedModule;
+// The startup promise for this isolate's single Go instance. This variable IS the
+// concurrency contract: ensureStarted assigns it synchronously, before any await,
+// so N concurrent requests all await the SAME startup instead of each building
+// their own instance and racing to signal it.
+let started;
+
+// The one object the Go instance registers its handlers on (handleRequest, and
+// the ready signal below). Module scope, not per request: the instance that
+// registers handleRequest outlives every individual request.
+const binding = {};
 
 globalThis.tryCatch = (fn) => {
   try {
@@ -18,33 +24,44 @@ globalThis.tryCatch = (fn) => {
   }
 };
 
-async function run(ctx) {
-  if (cachedModule === undefined) {
-    cachedModule = await loadModule();
-  }
+// start boots the Go instance exactly once. `env` is captured here because in
+// Workers the bindings object is identical for every request in an isolate.
+// Anything that genuinely varies per request must travel through
+// binding.handleRequest instead — never through this context.
+async function start(env) {
+  const wasmModule = await loadModule();
   const go = new Go();
 
   let ready;
   const readyPromise = new Promise((resolve) => {
     ready = resolve;
   });
-  // Go signals init completion via js.Global().Get("workers").ready() (see
-  // workers.Ready). The handshake MUST live on globalThis: the Go binary uses
-  // syscall/js, not //go:wasmimport, so a `workers` entry in the wasm importObject
-  // is dead — readyPromise would never resolve and every request would hang.
-  globalThis.workers = {
-    ready: () => {
-      ready();
-    },
+  // Go signals init completion via
+  // js.Global().Get("context").Get("binding").Get("ready") — see workers.Ready.
+  // This MUST ride ctx.binding and never globalThis: wasm_exec_worker.js gives
+  // each instance a Proxy that resolves ONLY the "context" property per instance,
+  // so any other global name is the single object shared by the whole isolate.
+  binding.ready = () => {
+    ready();
   };
-  const instance = new WebAssembly.Instance(cachedModule, go.importObject);
-  go.run(instance, ctx);
+
+  const instance = new WebAssembly.Instance(wasmModule, go.importObject);
+  go.run(instance, createRuntimeContext({ env, binding }));
   await readyPromise;
 }
 
+// ensureStarted is deliberately NOT async: the check-and-assign must complete
+// without yielding to the event loop, or two concurrent requests could both see
+// `started === undefined` and start two instances.
+function ensureStarted(env) {
+  if (started === undefined) {
+    started = start(env);
+  }
+  return started;
+}
+
 async function fetch(req, env, ctx) {
-  const binding = {};
-  await run(createRuntimeContext({ env, ctx, binding }));
+  await ensureStarted(env);
   const res = await binding.handleRequest(req);
   const out = new Response(res.body, res);
   out.headers.set("x-goflare", "__GOFLARE_VERSION__");
@@ -52,14 +69,12 @@ async function fetch(req, env, ctx) {
 }
 
 async function scheduled(event, env, ctx) {
-  const binding = {};
-  await run(createRuntimeContext({ env, ctx, binding }));
+  await ensureStarted(env);
   return binding.runScheduler(event);
 }
 
 async function queue(batch, env, ctx) {
-  const binding = {};
-  await run(createRuntimeContext({ env, ctx, binding }));
+  await ensureStarted(env);
   return binding.handleQueueMessageBatch(batch);
 }
 
