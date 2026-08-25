@@ -13,8 +13,12 @@ import (
 )
 
 const (
-	ImportEdge    = "github.com/tinywasm/goflare/edge"
-	ImportWorkers = "github.com/tinywasm/goflare/workers"
+	ImportEdge    = "github.com/tinywasm/cloudflare/edge"
+	ImportWorkers = "github.com/tinywasm/cloudflare/workers"
+
+	// LegacyImportEdge/Workers kept for backwards compat during migration.
+	LegacyImportEdge    = "github.com/tinywasm/goflare/edge"
+	LegacyImportWorkers = "github.com/tinywasm/goflare/workers"
 
 	ErrNoKnownImport = "cannot infer mode: edge/main.go imports neither " + ImportEdge + " nor " + ImportWorkers
 )
@@ -34,7 +38,7 @@ func validateEntry(entry string) error {
 
 	for _, spec := range f.Imports {
 		path, _ := strconv.Unquote(spec.Path.Value)
-		if path == ImportEdge || path == ImportWorkers {
+		if path == ImportEdge || path == ImportWorkers || path == LegacyImportEdge || path == LegacyImportWorkers {
 			return nil
 		}
 	}

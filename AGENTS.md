@@ -23,12 +23,14 @@ This is the single most important thing to get right in this repo.
 
 | Target | Packages | Runs where | Rules |
 |---|---|---|---|
-| **`wasm`** | `edge/`, `workers/`, `d1/`, `r2/`, `cloudflare/env_wasm.go` | **Inside the Cloudflare Worker** | **No standard library.** Use `tinywasm/fmt` instead of `errors`/`fmt`/`strconv`/`strings`. Talks to the runtime through `syscall/js`. |
+| **`wasm`** | **`tinywasm/cloudflare`** (`edge/`, `workers/`, `d1/`, `r2/`, `log/`, `env_wasm.go`) — see `tinywasm/cloudflare/AGENTS.md` for isolate lifecycle, `runtime.ticks` ABI, and shared-global constraints | **Inside the Cloudflare Worker** | **No standard library.** Use `tinywasm/fmt` instead of `errors`/`fmt`/`strconv`/`strings`. Talks to the runtime through `syscall/js`. |
 | **`!wasm`** | `build.go`, `mode.go`, `config.go`, `cloudflare.go`, `devserver/`, `cmd/` | The developer's machine / CI | **The standard library is correct and expected here** — `net/http`, `go/parser`, `os`, `strings`. |
 
 > ⚠️ **Anti-footgun.** The ecosystem rule "no stdlib in WASM code" applies **only to the `wasm`
 > column**. Do not "fix" stdlib imports in host tooling — that code never reaches a browser or
 > a Worker, and purging it breaks the build for no reason.
+>
+> Runtime invariants (isolate lifecycle, `runtime.ticks` BigInt ABI, `context.binding` vs `globalThis`) are documented in **`tinywasm/cloudflare/AGENTS.md`** — read it before touching `javascripts.go` or any bundling logic. Do not duplicate that guidance here.
 
 ## Testing
 

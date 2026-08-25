@@ -32,7 +32,7 @@ func TestEdgeSize(t *testing.T) {
 	tmpFile.Close()
 	defer os.Remove(tmpPath)
 
-	// Crea un main mínimo temporal que importa goflare/edge para medir el
+	// Crea un main mínimo temporal que importa cloudflare/edge para medir el
 	// costo base de la plataforma sin lógica de dominio.
 	tmpDir, err := os.MkdirTemp("", "edge-main-*")
 	if err != nil {
@@ -40,7 +40,7 @@ func TestEdgeSize(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 	mainPath := tmpDir + "/main.go"
-	if err := os.WriteFile(mainPath, []byte("package main\nimport _ \"github.com/tinywasm/goflare/edge\"\nfunc main(){}\n"), 0644); err != nil {
+	if err := os.WriteFile(mainPath, []byte("package main\nimport _ \"github.com/tinywasm/cloudflare/edge\"\nfunc main(){}\n"), 0644); err != nil {
 		t.Fatalf("falla al escribir main temporal: %v", err)
 	}
 	cmd := exec.Command(tinygoPath, "build", "-target", "wasm", "-no-debug", "-o", tmpPath, mainPath)

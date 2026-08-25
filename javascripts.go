@@ -3,7 +3,6 @@
 package goflare
 
 import (
-	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,16 +10,8 @@ import (
 
 	"github.com/tdewolff/minify/v2"
 	minjs "github.com/tdewolff/minify/v2/js"
+	cloudflareassets "github.com/tinywasm/cloudflare/assets"
 )
-
-//go:embed assets/wasm_exec_worker.js
-var embeddedWasmExec []byte
-
-//go:embed assets/runtime.mjs
-var embeddedRuntime []byte
-
-//go:embed assets/worker.mjs
-var embeddedWorker []byte
 
 // generateWorkerFile bundles and minifies the three JS assets into a single edge.js.
 func (g *Goflare) generateWorkerFile() error {
@@ -36,9 +27,9 @@ func (g *Goflare) generateWorkerFile() error {
 //  3. runtime.mjs   — loadModule + createRuntimeContext (imports stripped, already at top)
 //  4. worker.mjs    — fetch/scheduled/queue + export default
 func (g *Goflare) bundleJS(dest, wasmImport string) error {
-	wasmExecBody := stripIIFEWrapper(string(embeddedWasmExec))
-	runtimeBody := stripExports(stripImports(string(embeddedRuntime)))
-	workerBody := stripImports(string(embeddedWorker))
+	wasmExecBody := stripIIFEWrapper(string(cloudflareassets.WasmExecJS))
+	runtimeBody := stripExports(stripImports(string(cloudflareassets.RuntimeMJS)))
+	workerBody := stripImports(string(cloudflareassets.WorkerMJS))
 
 	workerBody = strings.ReplaceAll(workerBody, "__GOFLARE_VERSION__", identityValue())
 

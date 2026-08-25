@@ -8,7 +8,7 @@ import (
 
 	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/goflare/files"
-	"github.com/tinywasm/goflare/r2"
+	"github.com/tinywasm/cloudflare/r2"
 	"github.com/tinywasm/model"
 	"github.com/tinywasm/router"
 )

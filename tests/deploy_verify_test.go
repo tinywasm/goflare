@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -182,6 +183,8 @@ func TestDeployVerify_AssetOnlySkipsProbe(t *testing.T) {
 }
 
 func TestBuild_JSBundleMarkerReplaced(t *testing.T) {
+	t.Setenv("GOWORK", "off")
+	t.Setenv("GOFLAGS", "-mod=mod")
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -194,15 +197,24 @@ func TestBuild_JSBundleMarkerReplaced(t *testing.T) {
 	os.MkdirAll(entryDir, 0755)
 
 	modBytes, _ := os.ReadFile(filepath.Join(repoRoot, "go.mod"))
-	newMod := strings.Replace(string(modBytes), "module github.com/tinywasm/goflare", "module testapp\nrequire github.com/tinywasm/goflare v0.0.0-0", 1)
-	newMod += fmt.Sprintf("\nreplace github.com/tinywasm/goflare => %s\n", repoRoot)
+	newMod := strings.Replace(string(modBytes), "module github.com/tinywasm/goflare", "module testapp", 1)
+	newMod = strings.ReplaceAll(newMod, "github.com/tinywasm/cloudflare v0.0.2", "github.com/tinywasm/cloudflare v0.0.0")
+	cloudflareRoot := filepath.Join(filepath.Dir(repoRoot), "cloudflare")
+	if !strings.Contains(newMod, "replace github.com/tinywasm/cloudflare") {
+		newMod += fmt.Sprintf("\nreplace github.com/tinywasm/cloudflare => %s\n", cloudflareRoot)
+	}
 	os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(newMod), 0644)
 	if sumBytes, err := os.ReadFile(filepath.Join(repoRoot, "go.sum")); err == nil {
 		os.WriteFile(filepath.Join(tmpDir, "go.sum"), sumBytes, 0644)
 	}
+	cmd := exec.Command("go", "mod", "tidy")
+	cmd.Dir = tmpDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("go mod tidy failed: %v\n%s", err, string(out))
+	}
 
 	mainContent := `package main
-import _ "github.com/tinywasm/goflare/edge"
+import _ "github.com/tinywasm/cloudflare/edge"
 func main() {}
 `
 	os.WriteFile(filepath.Join(entryDir, "main.go"), []byte(mainContent), 0644)

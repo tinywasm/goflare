@@ -9,9 +9,9 @@
 package files
 
 import (
+	"github.com/tinywasm/cloudflare/log"
 	"github.com/tinywasm/filetype"
 	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/goflare/log"
 	"github.com/tinywasm/model"
 	"github.com/tinywasm/router"
 	"github.com/tinywasm/unixid"

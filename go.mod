@@ -4,16 +4,11 @@ go 1.25.2
 
 require (
 	github.com/tdewolff/minify/v2 v2.24.12
-	github.com/tinywasm/await v0.1.0
-	github.com/tinywasm/ddl v0.0.4
+	github.com/tinywasm/cloudflare v0.0.2
 	github.com/tinywasm/filetype v0.0.2
 	github.com/tinywasm/fmt v0.25.7
-	github.com/tinywasm/jsvalue v0.0.15
-	github.com/tinywasm/orm v0.11.7
 	github.com/tinywasm/server v0.2.37
 	github.com/tinywasm/sitec v0.2.4
-	github.com/tinywasm/sqlt v0.0.8
-	github.com/tinywasm/storage v0.0.2
 	github.com/tinywasm/tinygo v1.0.0
 )
 
@@ -21,6 +16,7 @@ require (
 	github.com/HugoSmits86/nativewebp v1.2.1 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/smallstep/truststore v0.13.0 // indirect
+	github.com/tinywasm/await v0.1.0 // indirect
 	github.com/tinywasm/color v0.1.1 // indirect
 	github.com/tinywasm/font v0.0.4 // indirect
 	github.com/tinywasm/image v0.1.0 // indirect
@@ -40,7 +36,7 @@ require (
 	github.com/tinywasm/dom v0.13.5 // indirect
 	github.com/tinywasm/fetch v0.1.24 // indirect
 	github.com/tinywasm/html v0.0.17 // indirect
-	github.com/tinywasm/json v0.5.23
+	github.com/tinywasm/json v0.5.23 // indirect
 	github.com/tinywasm/model v0.1.4
 	github.com/tinywasm/router v0.1.27
 	github.com/tinywasm/svg v0.3.0 // indirect

@@ -37,8 +37,8 @@ GoFlare is a Go library and CLI that bridges the gap between Go source code and 
 - **Memory Store:** An exported `MemoryStore` is provided for testing and library consumers. Local keyring management has been removed in favor of platform-based secrets (CI/CD).
 
 ### 3. Build Pipeline (`build.go`, `mode.go`, `javascripts.go`, `wasm.go`)
-- **Entry Validation (`mode.go`):** `validateEntry()` verifies `edge/main.go` imports `tinywasm/goflare/edge` or `tinywasm/goflare/workers`.
-- **Worker Build:** Produces `.build/edge.js` (bundled) and `.build/edge.wasm`.
+- **Entry Validation (`mode.go`):** `validateEntry()` verifies `edge/main.go` imports `tinywasm/cloudflare/edge` or `tinywasm/cloudflare/workers` (legacy `tinywasm/goflare/edge` aceptado durante migración).
+- **Worker Build:** Produces `.build/edge.js` (bundled from `tinywasm/cloudflare/assets` via `javascripts.go`) and `.build/edge.wasm`.
 - **Static Site Build:** Delegates static site compilation to `sitec.Build` via a pluggable `SiteBuilder` seam. `sitec` scans project packages for declared producers, compiles frontend WASM if `web/client.go` exists, and emits static assets to `web/public/`.
 
 ### 4. Authentication (`auth.go`)
@@ -48,7 +48,8 @@ GoFlare is a Go library and CLI that bridges the gap between Go source code and 
 - **Internal HTTP Client:** `CfClient` handles direct interaction with Cloudflare API v4.
 - **Worker + Assets Deploy:** Unified deployment via 3-phase Direct Upload (Asset Upload Session -> Chunked Uploads -> Worker Script PUT with metadata and asset JWT).
 
-### 6. Edge Runtime (`assets/worker.mjs`, `assets/runtime.mjs`, `workers/workers.go`)
+### 6. Edge Runtime (`tinywasm/cloudflare/assets/worker.mjs`, `tinywasm/cloudflare/assets/runtime.mjs`, `tinywasm/cloudflare/workers/workers.go`)
+> El runtime vive en **`tinywasm/cloudflare`**, no en este repo — `goflare` sólo lo empaqueta vía `cloudflare/assets` embed.
 - **Lifecycle:** Go/WASM instance is booted **once per isolate** (not per request). `main()` runs once during isolate initialization.
 - **Request Dispatch:** Sequential and concurrent requests reuse the isolate's Go instance via `binding.handleRequest`.
 - **Handshake:** Init signal passes via `context.binding.ready` (instance-scoped door) rather than shared globals.
@@ -60,19 +61,20 @@ goflare/
 ├── goflare.go          # Core Goflare struct and entry points
 ├── config.go           # Configuration loading and validation
 ├── store.go            # Memory storage abstraction
-├── mode.go             # Entry validation for edge/main.go imports
+├── mode.go             # Entry validation for edge/main.go imports (tinywasm/cloudflare)
 ├── build.go            # Build orchestration
 ├── assets.go           # Asset hashing, manifest generation, and bucket upload
 ├── auth.go             # Cloudflare authentication logic
 ├── cloudflare.go       # Cloudflare API client and deployer
 ├── run.go              # CLI runner functions
-├── javascripts.go      # JS bundling (worker.mjs)
+├── javascripts.go      # JS bundling (reads from tinywasm/cloudflare/assets)
 ├── wasm.go             # WASM compilation delegation
-├── edge/               # Edge router adapter
-├── workers/            # JS↔Go bridge (Request/Response, syscall/js)
-├── cloudflare/         # Dual-target env access (env_wasm.go + env_native.go)
+├── files/              # WASM file upload helper (uses tinywasm/cloudflare/log)
 ├── tests/              # Comprehensive test suite
 └── cmd/goflare/        # CLI entry point (main.go)
+
+# Runtime lives in tinywasm/cloudflare:
+#   edge/, workers/, d1/, r2/, log/, assets/, env_*.go
 ```
 
 ## Design Principles

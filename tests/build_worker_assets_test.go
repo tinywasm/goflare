@@ -5,6 +5,7 @@ package goflare_test
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -13,6 +14,8 @@ import (
 )
 
 func TestBuildWorkerAssets_SingleArtifact(t *testing.T) {
+	t.Setenv("GOWORK", "off")
+	t.Setenv("GOFLAGS", "-mod=mod")
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -20,12 +23,13 @@ func TestBuildWorkerAssets_SingleArtifact(t *testing.T) {
 	repoRoot := filepath.Dir(cwd)
 
 	imports := []string{
-		`github.com/tinywasm/goflare/edge`,
-		`github.com/tinywasm/goflare/workers`,
+		`github.com/tinywasm/cloudflare/edge`,
+		`github.com/tinywasm/cloudflare/workers`,
 	}
 
 	for _, imp := range imports {
 		t.Run("Import_"+imp, func(t *testing.T) {
+			t.Setenv("GOWORK", "off")
 			tmpDir := t.TempDir()
 			entryDir := filepath.Join(tmpDir, "edge")
 			outputDir := filepath.Join(tmpDir, ".build")
@@ -38,13 +42,23 @@ func TestBuildWorkerAssets_SingleArtifact(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			newMod := strings.Replace(string(modBytes), "module github.com/tinywasm/goflare", "module testapp\nrequire github.com/tinywasm/goflare v0.0.0-0", 1)
-			newMod += fmt.Sprintf("\nreplace github.com/tinywasm/goflare => %s\n", repoRoot)
+			newMod := strings.Replace(string(modBytes), "module github.com/tinywasm/goflare", "module testapp", 1)
+			newMod = strings.ReplaceAll(newMod, "github.com/tinywasm/cloudflare v0.0.2", "github.com/tinywasm/cloudflare v0.0.0")
+			cloudflareRoot := filepath.Join(filepath.Dir(repoRoot), "cloudflare")
+			if !strings.Contains(newMod, "replace github.com/tinywasm/cloudflare") {
+				newMod += fmt.Sprintf("\nreplace github.com/tinywasm/cloudflare => %s\n", cloudflareRoot)
+			}
 			if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(newMod), 0644); err != nil {
 				t.Fatal(err)
 			}
 			if sumBytes, err := os.ReadFile(filepath.Join(repoRoot, "go.sum")); err == nil {
 				os.WriteFile(filepath.Join(tmpDir, "go.sum"), sumBytes, 0644)
+			}
+			cmd := exec.Command("go", "mod", "tidy")
+			cmd.Dir = tmpDir
+			cmd.Env = append(os.Environ(), "GOWORK=off")
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("go mod tidy failed: %v\n%s", err, string(out))
 			}
 
 			mainContent := `package main
