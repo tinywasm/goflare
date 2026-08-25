@@ -18,7 +18,7 @@ import (
 //	binding is accessed via js.Global().Get("context") — injected by wasm_exec.js Proxy.
 func Handle(fn func(*Response, *Request)) {
 	// Access the runtime context injected by worker.mjs into go.run(instance, ctx).
-	// wasm_exec.js patches global with a Proxy: global.context → ctx = {env, ctx, binding}.
+	// wasm_exec.js patches global with a Proxy: global.context → ctx = {env, binding}.
 	binding := js.Global().Get("context").Get("binding")
 
 	binding.Set("handleRequest", js.FuncOf(func(this js.Value, args []js.Value) any {
@@ -57,10 +57,17 @@ func Handle(fn func(*Response, *Request)) {
 
 // Ready signals the Workers runtime that Go initialization is complete.
 // Called automatically by Handle(). Call manually only if not using Handle().
+//
+// It reads the callback from context.binding — the same instance-scoped door
+// Handle() uses — never from a bare global. js.Global() is a Proxy
+// (assets/wasm_exec_worker.js) that resolves ONLY the "context" property per wasm
+// instance; every other name resolves to the single object shared by the whole
+// isolate, where a second request would silently clobber the signal. See
+// assets/worker.mjs's start() for the JS side of this contract.
 func Ready() {
-	workers := js.Global().Get("workers")
-	if !workers.IsNull() && !workers.IsUndefined() {
-		workers.Call("ready")
+	ready := js.Global().Get("context").Get("binding").Get("ready")
+	if !ready.IsNull() && !ready.IsUndefined() {
+		ready.Invoke()
 	}
 }
 

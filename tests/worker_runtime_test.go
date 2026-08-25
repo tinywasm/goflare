@@ -82,6 +82,26 @@ func TestWorkerRuntime_StartsOncePerIsolate(t *testing.T) {
 				"isolate and reuse it", perRequest)
 		}
 	}
+
+	// 3. Startup must not ignore Go exiting. main() returning without signalling
+	//    readiness leaves the startup promise unresolved — and because startup is
+	//    cached for the life of the isolate, that hangs EVERY later request with
+	//    nothing logged. Observing the result of go.run turns the silent hang into
+	//    a named error. Every consumer error path that prints and returns (missing
+	//    binding, missing secret) depends on this to be diagnosable at all.
+	startBody, ok := functionBody(js, "async function start(")
+	if !ok {
+		t.Fatal("could not locate start() in worker.mjs")
+	}
+	run := strings.Index(startBody, "go.run(")
+	if run < 0 {
+		t.Fatal("start() never calls go.run()")
+	}
+	if !strings.Contains(startBody[run:], ".then(") {
+		t.Error("start() discards the promise returned by go.run(): a main() that returns " +
+			"without signalling readiness would leave startup pending forever, hanging every " +
+			"request in the isolate with no diagnostic")
+	}
 }
 
 // functionBody returns the source between the brace that opens the declaration
