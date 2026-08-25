@@ -2,6 +2,8 @@
 PLAN: "fix!: start the Go instance once per isolate instead of once per request"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 1554928793810500859
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
