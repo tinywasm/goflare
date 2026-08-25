@@ -50,6 +50,21 @@ El despliegue combina la API Direct Upload de Assets de Cloudflare Workers con e
 }
 ```
 
+Cada parte del multipart lleva su propio `Content-Type` — Cloudflare lo usa
+para distinguir un módulo ES de un blob opaco, independientemente del
+nombre de campo:
+
+| Parte | Content-Type |
+|---|---|
+| `edge.js` (`main_module`) | `application/javascript+module` |
+| `edge.wasm` | `application/wasm` |
+
+> *Nunca uses `multipart.Writer.CreateFormFile` para estas partes — la
+> librería estándar de Go fija `application/octet-stream` sin posibilidad
+> de override, y Cloudflare responde `Main module must be an ES module.`
+> (code 10021). Construye la cabecera a mano con `textproto.MIMEHeader` +
+> `mw.CreatePart`, como ya hace `uploadAssets` en `assets.go`.*
+
 ---
 
 ## Enrutamiento y `WorkerFirstRoutes`

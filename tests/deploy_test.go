@@ -16,10 +16,15 @@ import (
 
 // capturedMetadata parses the "metadata" multipart field of the PUT to
 // /workers/scripts/{name}, and reports whether the "edge.js" file part was
-// attached.
+// attached, along with the Content-Type header each file part was sent
+// with (Cloudflare uses that header, not the field name, to tell an ES
+// module main_module apart from an opaque blob — see
+// TestDeploy_ScriptPart_UsesESModuleContentType below).
 type capturedMetadata struct {
-	metadata      map[string]any
-	hasScriptFile bool
+	metadata          map[string]any
+	hasScriptFile     bool
+	scriptContentType string
+	wasmContentType   string
 }
 
 func captureDeployPUT(t *testing.T, r *http.Request) capturedMetadata {
@@ -31,8 +36,21 @@ func captureDeployPUT(t *testing.T, r *http.Request) capturedMetadata {
 	if err := json.Unmarshal([]byte(r.FormValue("metadata")), &meta); err != nil {
 		t.Fatalf("failed to unmarshal metadata field: %v", err)
 	}
-	_, hasScript := r.MultipartForm.File["edge.js"]
-	return capturedMetadata{metadata: meta, hasScriptFile: hasScript}
+	scriptFiles, hasScript := r.MultipartForm.File["edge.js"]
+	var scriptCT string
+	if hasScript && len(scriptFiles) > 0 {
+		scriptCT = scriptFiles[0].Header.Get("Content-Type")
+	}
+	var wasmCT string
+	if wasmFiles, ok := r.MultipartForm.File["edge.wasm"]; ok && len(wasmFiles) > 0 {
+		wasmCT = wasmFiles[0].Header.Get("Content-Type")
+	}
+	return capturedMetadata{
+		metadata:          meta,
+		hasScriptFile:     hasScript,
+		scriptContentType: scriptCT,
+		wasmContentType:   wasmCT,
+	}
 }
 
 func withCloudflareToken(t *testing.T) {
@@ -137,6 +155,66 @@ func TestDeploy_ScriptOnly_NoAssetsKeyNoUploadSession(t *testing.T) {
 	}
 	if !captured.hasScriptFile {
 		t.Error("expected the multipart PUT to attach an edge.js part")
+	}
+}
+
+// TestDeploy_ScriptPart_UsesESModuleContentType is the regression test for
+// veltylabs/iam's production deploy failure:
+//
+//	CF API PUT /accounts/.../workers/scripts/iam → HTTP 400:
+//	Uncaught TypeError: Main module must be an ES module. (code: 10021)
+//
+// Cloudflare's Workers Script Upload API tells an ES module main_module
+// apart from an opaque blob purely by the Content-Type of its multipart
+// part — see https://developers.cloudflare.com/workers/configuration/multipart-upload-metadata/
+// and the "files" encoding of PUT /accounts/{account_id}/workers/scripts/{script_name}
+// in Cloudflare's OpenAPI spec, which lists "application/javascript+module"
+// (or "text/javascript+module") for ES module files, distinct from the
+// legacy "application/javascript" service-worker-syntax body_part.
+//
+// addFilePart (cloudflare.go) builds every part with
+// multipart.Writer.CreateFormFile, which the Go standard library hardcodes
+// to Content-Type "application/octet-stream" — Cloudflare cannot tell
+// edge.js is an ES module and rejects the whole deploy. assets.go already
+// solves the same problem correctly for asset parts (a hand-built
+// textproto.MIMEHeader passed to mw.CreatePart); addFilePart never got the
+// same treatment.
+func TestDeploy_ScriptPart_UsesESModuleContentType(t *testing.T) {
+	withCloudflareToken(t)
+	env := newTestEnv(t)
+	os.Remove(filepath.Join(env.PublicDir, "index.html")) // script-only: isolate the assertion
+	env.writeOutput("edge.js", "export default { fetch() {} }")
+	env.writeOutput("edge.wasm", "wasm-bytes")
+
+	var captured capturedMetadata
+	server := MockHTTPServer(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodPut && strings.Contains(r.URL.Path, "/workers/scripts/") {
+			captured = captureDeployPUT(t, r)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"success":true,"result":{}}`))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	})
+	defer server.Close()
+
+	g := goflare.New(&goflare.Config{
+		AccountID: "acc-123", WorkerName: "my-worker",
+		PublicDir: env.PublicDir, OutputDir: env.OutputDir,
+	})
+	g.BaseURL = server.URL
+
+	if err := g.Deploy(); err != nil {
+		t.Fatalf("Deploy failed: %v", err)
+	}
+
+	if got := captured.scriptContentType; got != "application/javascript+module" {
+		t.Errorf("edge.js part Content-Type = %q, want %q — Cloudflare rejects anything else on main_module with: Main module must be an ES module",
+			got, "application/javascript+module")
+	}
+	if got := captured.wasmContentType; got != "application/wasm" {
+		t.Errorf("edge.wasm part Content-Type = %q, want %q", got, "application/wasm")
 	}
 }
 

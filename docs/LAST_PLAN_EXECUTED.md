@@ -1,121 +1,212 @@
 ---
-PLAN: "fix: el Response del Worker deja de arrastrar las tablas Unicode"
+PLAN: "fix: deploy edge.js/edge.wasm multipart parts as ES module, not octet-stream"
 EXECUTOR: jules
 REVIEWER: none
 ---
 
-> Este plan se despacha con el flujo CodeJob. Ver skill: agents-workflow.
+> This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
 
-# Plan — `tinywasm/goflare`: quitar `bytes` del Worker
+# Plan — `tinywasm/goflare`: fix "Main module must be an ES module" on `goflare deploy`
 
-## El problema, en un campo
+## The problem, in one line
 
-`workers/response.go` acumula el cuerpo de la respuesta en un `bytes.Buffer`:
+`goflare deploy` uploads `edge.js` (the Worker's `main_module`) with
+`Content-Type: application/octet-stream`. Cloudflare cannot tell it's an ES
+module and rejects the whole deploy.
+
+## Production evidence
+
+`veltylabs/iam`'s CI (`.github/workflows/deploy.yml`, step "Deploy with
+goflare") failed with:
+
+```
+Error: deploy failed: CF API PUT /accounts/***/workers/scripts/iam → HTTP 400: Uncaught TypeError: Main module must be an ES module.
+--- Deployment Summary ---
+[-] Worker: Failed - CF API PUT /accounts/***/workers/scripts/iam → HTTP 400: Uncaught TypeError: Main module must be an ES module.
+ (code: 10021)
+```
+
+This is not iam-specific. `veltylabs/misitio` deploys the same shape of
+Worker (script + static assets) through the same `goflare deploy` code path,
+and every one of its `Deploy` runs on `main` has also failed (see
+`gh run list --workflow=deploy.yml` in that repo) — though for an unrelated
+reason (a stale local `replace` directive in its own `go.mod` that doesn't
+resolve in CI; out of scope for this plan, tracked separately). No deploy of
+a *script*-type Worker (one with `edge/main.go`) has ever actually
+succeeded against the real Cloudflare API through `goflare deploy` — this
+bug has been present since the function that causes it was first introduced
+(commit `9e3234a`, Feb 2026) and was never exercised end-to-end until now.
+
+## Root cause
+
+Confirmed against Cloudflare's own OpenAPI spec for
+`PUT /accounts/{account_id}/workers/scripts/{script_name}` and
+<https://developers.cloudflare.com/workers/configuration/multipart-upload-metadata/>:
+the `files` parts of the multipart body accept exactly these Content-Types:
+
+```
+application/javascript+module, text/javascript+module, application/javascript,
+text/javascript, text/x-python, text/x-python-requirement, application/wasm,
+text/plain, application/octet-stream, application/source-map
+```
+
+`application/javascript+module` (or `text/javascript+module`) is what tells
+Cloudflare a part is an **ES module** — required for any part referenced by
+`metadata.main_module`. `application/javascript` (no `+module`) is the
+legacy Service Worker syntax, used with `body_part` instead. Cloudflare's
+own curl examples upload it like this:
+
+```bash
+--form 'index.js=@-;filename=index.js;type=application/javascript+module'
+```
+
+`addFilePart` in [`cloudflare.go`](cloudflare.go) builds every multipart
+part with `multipart.Writer.CreateFormFile`:
 
 ```go
-import (
-	"bytes"
-	"syscall/js"
-)
-
-type Response struct {
-	status  int
-	headers map[string]string
-	buf     bytes.Buffer   // ← esto
+func addFilePart(mw *multipart.Writer, fieldName, filePath string) error {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("open %s: %w", filePath, err)
+	}
+	defer f.Close()
+	part, err := mw.CreateFormFile(fieldName, filepath.Base(filePath))
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(part, f)
+	return err
 }
 ```
 
-`bytes` importa `unicode`, y `unicode` trae sus tablas de rangos completas
-—categorías, scripts, mayúsculas/minúsculas—. **Medido sobre un Worker real
-(`veltylabs/misitio`) son 93.733 bytes**, casi un 13 % del binario, por un campo
-que sólo necesita acumular bytes y entregarlos al final.
+`multipart.Writer.CreateFormFile` is Go standard library — it **always**
+sets `Content-Type: application/octet-stream` on the part, with no way to
+override it. Both `edge.js` (the ES module main_module) and `edge.wasm` are
+uploaded this way, so Cloudflare sees an opaque blob where it expects an ES
+module and returns error 10021.
 
-El límite de `functions/edge.wasm` en Cloudflare es **1 MB duro**: el despliegue
-falla, no degrada. Cada KB del Worker es presupuesto que una aplicación no puede
-gastar en su propia lógica.
+`assets.go` already solves the identical problem correctly for asset parts
+— it builds an explicit `textproto.MIMEHeader` and calls `mw.CreatePart(h)`
+directly instead of `CreateFormFile` (see `uploadAssets`, around line
+150). `addFilePart` never received the same treatment. This plan applies
+the same, already-proven pattern to it.
 
-## El cambio
+## Stage 1 — fix `addFilePart` (`cloudflare.go`)
+
+Add two unexported constants near the top of `cloudflare.go`, next to the
+existing `cfAPIBase` constant:
 
 ```go
-import (
-	"syscall/js"
+const (
+	contentTypeESModule = "application/javascript+module"
+	contentTypeWasm     = "application/wasm"
 )
+```
 
-type Response struct {
-	status  int
-	headers map[string]string
-	buf     []byte
-}
+Add `"net/textproto"` to the import block (it is not yet imported in this
+file).
 
-// Write agrega bytes al cuerpo de la respuesta.
-func (w *Response) Write(b []byte) (int, error) {
-	w.buf = append(w.buf, b...)
-	return len(b), nil
-}
+Replace `addFilePart` with a version that takes an explicit content type and
+builds the part header manually — mirroring `assets.go`'s existing
+`uploadAssets` pattern exactly (same header-construction shape, same
+`mw.CreatePart` call):
 
-// WriteString agrega una cadena al cuerpo de la respuesta.
-func (w *Response) WriteString(s string) (int, error) {
-	w.buf = append(w.buf, s...)
-	return len(s), nil
+```go
+func addFilePart(mw *multipart.Writer, fieldName, filePath, contentType string) error {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("open %s: %w", filePath, err)
+	}
+	defer f.Close()
+
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Disposition",
+		fmt.Sprintf(`form-data; name="%s"; filename="%s"`, fieldName, filepath.Base(filePath)))
+	h.Set("Content-Type", contentType)
+
+	part, err := mw.CreatePart(h)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(part, f)
+	return err
 }
 ```
 
-Y en `build()`, `w.buf.Bytes()` pasa a ser `w.buf`.
+Note: this does not escape quotes in `fieldName`/`filename` (neither does
+`assets.go`'s identical pattern for its own `Content-Disposition`). Do not
+add escaping here — it would be inconsistent with `assets.go`, and both
+call sites only ever pass fixed literals (`"edge.js"`, `"edge.wasm"`) or
+paths goflare itself generated, never attacker- or user-supplied strings.
 
-`append([]byte, string...)` es válido en Go y no copia por un camino distinto al
-de `bytes.Buffer`; `Write` y `WriteString` conservan su firma
-`(int, error)` para seguir satisfaciendo `io.Writer` **estructuralmente**, sin
-que este paquete importe `io`.
+Update the two call sites inside `Deploy()`:
 
-`buf` empieza en `nil`: `append` sobre un slice nil asigna en la primera
-escritura, que es lo que `bytes.Buffer` hacía de todos modos. **No lo
-preasignes con `make`** — un tamaño inventado desperdicia memoria en las
-respuestas cortas, que son la mayoría.
+```go
+	if hasScript {
+		if err := addFilePart(mw, "edge.js", edgeJsPath, contentTypeESModule); err != nil {
+			return err
+		}
+		if err := addFilePart(mw, "edge.wasm", edgeWasmPath, contentTypeWasm); err != nil {
+			return err
+		}
+	}
+```
 
-## Verificación de que no quedan puertas abiertas
+## Stage 2 — test (already written, currently RED)
 
-Este arreglo es la mitad de un par. La otra mitad vive en `tinywasm/user` y sale
-en su propio plan. Están **acopladas**: `unicode` entra al binario por más de un
-camino, y medido, quitar sólo este campo con la otra puerta abierta rinde
-**2.119 bytes**; con las dos cerradas, **93.733**.
+[`tests/deploy_test.go`](../tests/deploy_test.go) already contains
+`TestDeploy_ScriptPart_UsesESModuleContentType`, plus a small extension to
+the shared `capturedMetadata`/`captureDeployPUT` helpers (used by every
+other test in that file) so they also expose the Content-Type header of the
+`edge.js`/`edge.wasm` multipart parts. Confirmed failing today:
 
-Consecuencia para quien ejecute este plan: **no te alarmes si la medición local
-da una ganancia pequeña.** No es que el cambio no sirva; es que el otro camino
-sigue abierto en la aplicación con la que midas. El criterio de aceptación de
-abajo mide sobre el paquete, no sobre una aplicación, justamente por eso.
+```
+$ go test ./tests/... -run TestDeploy_ScriptPart_UsesESModuleContentType -v
+    deploy_test.go:213: edge.js part Content-Type = "application/octet-stream", want "application/javascript+module" — Cloudflare rejects anything else on main_module with: Main module must be an ES module
+    deploy_test.go:217: edge.wasm part Content-Type = "application/octet-stream", want "application/wasm"
+--- FAIL: TestDeploy_ScriptPart_UsesESModuleContentType (0.00s)
+```
 
-## Barrido del resto del repositorio
+Do not modify this test. Stage 1 must make it pass with no other test in
+the package regressing.
 
-`bytes` no es el único riesgo. Revisa **todo el código que compile para el
-Worker** —`workers/`, `edge/`, `d1/`, `r2/`, `cloudflare/`, `log/`— y sustituye
-cualquier import de estos paquetes de la biblioteca estándar:
+## Stage 3 — documentation
 
-| Si encuentras | Usa |
+Update [`docs/BUILD_WORKER_ASSETS.md`](../docs/BUILD_WORKER_ASSETS.md),
+"Fase 3 — Despliegue del Worker" section: after the existing `metadata`
+JSON example, add a short subsection documenting the per-part Content-Type
+contract, so this never regresses silently again:
+
+```markdown
+Cada parte del multipart lleva su propio `Content-Type` — Cloudflare lo usa
+para distinguir un módulo ES de un blob opaco, independientemente del
+nombre de campo:
+
+| Parte | Content-Type |
 |---|---|
-| `bytes` | `[]byte` con `append` |
-| `strings` | `github.com/tinywasm/fmt` (`HasPrefix`, `Contains`, `Convert(s).TrimPrefix(p).String()`) |
-| `strconv` | `github.com/tinywasm/fmt` |
-| `fmt` | `github.com/tinywasm/fmt` |
-| `errors` | `fmt.Err(...)` / `fmt.Errf(...)` de `tinywasm/fmt` |
-| `encoding/json` | `github.com/tinywasm/json` |
+| `edge.js` (`main_module`) | `application/javascript+module` |
+| `edge.wasm` | `application/wasm` |
 
-**Anti-footgun:** esto aplica al código que se compila para el Worker. Los
-`_test.go` y cualquier herramienta de build de este repo compilan con Go estándar
-y **usan la stdlib legítimamente**. No "arregles" sus imports.
+> *Nunca uses `multipart.Writer.CreateFormFile` para estas partes — la
+> librería estándar de Go fija `application/octet-stream` sin posibilidad
+> de override, y Cloudflare responde `Main module must be an ES module.`
+> (code 10021). Construye la cabecera a mano con `textproto.MIMEHeader` +
+> `mw.CreatePart`, como ya hace `uploadAssets` en `assets.go`.*
+```
 
-## Criterios de aceptación
+## Acceptance criteria
 
-- [ ] `GOOS=js GOARCH=wasm go list -deps ./workers/` **no contiene** `bytes`,
-      `unicode`, `strings`, `strconv`, `fmt` ni `errors`.
-- [ ] Lo mismo para `./edge/`, `./d1/`, `./r2/`, `./cloudflare/` y `./log/`.
-- [ ] `Write`, `WriteString` y `Header` conservan sus firmas: ningún consumidor
-      cambia una línea.
-- [ ] Los tests actuales del repositorio pasan sin modificarse.
-- [ ] Un test nuevo comprueba que el cuerpo sale intacto: tres `Write` y dos
-      `WriteString` alternados producen exactamente la concatenación esperada,
-      incluidos bytes no ASCII (UTF-8 multibyte) y un `Write` de slice vacío.
+- [ ] `go test ./tests/... -run TestDeploy -v` — all pass, including
+      `TestDeploy_ScriptPart_UsesESModuleContentType`.
+- [ ] `go test ./...` — full suite green, no regressions.
+- [ ] `grep -n "CreateFormFile" cloudflare.go` → empty (no remaining
+      hardcoded-content-type part uploads in this file).
+- [ ] `docs/BUILD_WORKER_ASSETS.md` documents the per-part Content-Type
+      table above.
+- [ ] `go vet ./...` clean.
 
-## Fuera de alcance
-
-Cualquier otro cambio en la API de `goflare`. Este plan es una sustitución de
-tipo y un barrido de imports, nada más.
+| Stage | File(s) | Done when |
+|---|---|---|
+| 1 | `cloudflare.go` | `addFilePart` takes an explicit content type; both call sites pass `contentTypeESModule`/`contentTypeWasm` |
+| 2 | `tests/deploy_test.go` | Already written — `TestDeploy_ScriptPart_UsesESModuleContentType` passes |
+| 3 | `docs/BUILD_WORKER_ASSETS.md` | Content-Type table added under "Fase 3" |

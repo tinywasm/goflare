@@ -9,6 +9,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +17,11 @@ import (
 )
 
 const cfAPIBase = "https://api.cloudflare.com/client/v4"
+
+const (
+	contentTypeESModule = "application/javascript+module"
+	contentTypeWasm     = "application/wasm"
+)
 
 type CfClient struct {
 	Token      string
@@ -241,10 +247,10 @@ func (g *Goflare) Deploy() error {
 	}
 
 	if hasScript {
-		if err := addFilePart(mw, "edge.js", edgeJsPath); err != nil {
+		if err := addFilePart(mw, "edge.js", edgeJsPath, contentTypeESModule); err != nil {
 			return err
 		}
-		if err := addFilePart(mw, "edge.wasm", edgeWasmPath); err != nil {
+		if err := addFilePart(mw, "edge.wasm", edgeWasmPath, contentTypeWasm); err != nil {
 			return err
 		}
 	}
@@ -453,13 +459,19 @@ func (g *Goflare) retry(n int, base time.Duration, fn func() error) error {
 	return err
 }
 
-func addFilePart(mw *multipart.Writer, fieldName, filePath string) error {
+func addFilePart(mw *multipart.Writer, fieldName, filePath, contentType string) error {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("open %s: %w", filePath, err)
 	}
 	defer f.Close()
-	part, err := mw.CreateFormFile(fieldName, filepath.Base(filePath))
+
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Disposition",
+		fmt.Sprintf(`form-data; name="%s"; filename="%s"`, fieldName, filepath.Base(filePath)))
+	h.Set("Content-Type", contentType)
+
+	part, err := mw.CreatePart(h)
 	if err != nil {
 		return err
 	}
