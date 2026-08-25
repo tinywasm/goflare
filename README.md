@@ -91,6 +91,12 @@ func main() {
 > `github.com/tinywasm/cloudflare` — `goflare` only bundles it via `cloudflare/assets`.
 > Legacy `github.com/tinywasm/goflare/edge` is still accepted by `mode.go` during migration.
 
+## Migrations from Outside a Worker
+
+`goflare.NewD1Migrator` runs DDL migrations against a D1 database from CI —
+outside a Worker, where `cloudflare/d1.NewEdge` doesn't exist. See
+[docs/D1.md](docs/D1.md).
+
 ## ⚠️ Critical: NO heavy stdlib in wasm code
 Files with `//go:build wasm` (everything under `edge/`, `routes/`, `modules/`, `tinywasm/cloudflare`) **NEVER** import `fmt`, `strings`, `errors`, `encoding/*`, `net/http`, `log`, `io/ioutil`. Use `tinywasm/fmt`, `tinywasm/json`, `tinywasm/strings`, `tinywasm/fetch` instead.
 
