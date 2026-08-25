@@ -4,11 +4,13 @@ go 1.25.2
 
 require (
 	github.com/tdewolff/minify/v2 v2.24.12
-	github.com/tinywasm/cloudflare v0.0.3
+	github.com/tinywasm/cloudflare v0.0.4
+	github.com/tinywasm/ddl v0.0.12
 	github.com/tinywasm/filetype v0.0.2
 	github.com/tinywasm/fmt v0.25.7
 	github.com/tinywasm/server v0.2.37
 	github.com/tinywasm/sitec v0.2.4
+	github.com/tinywasm/sqlt v0.0.8
 	github.com/tinywasm/tinygo v1.0.0
 )
 
@@ -22,6 +24,7 @@ require (
 	github.com/tinywasm/image v0.1.0 // indirect
 	github.com/tinywasm/js v0.0.4 // indirect
 	github.com/tinywasm/modfind v0.0.4 // indirect
+	github.com/tinywasm/storage v0.0.2 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/image v0.45.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
