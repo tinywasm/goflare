@@ -46,8 +46,30 @@ async function start(env) {
   };
 
   const instance = new WebAssembly.Instance(wasmModule, go.importObject);
-  go.run(instance, createRuntimeContext({ env, binding }));
+
+  // go.run settles when Go's main() returns. In a healthy Worker that never
+  // happens — Handle() blocks forever once it has registered handleRequest — so
+  // settling here means main() returned WITHOUT signalling readiness. Since
+  // `started` is cached for the life of the isolate, readyPromise would then hang
+  // EVERY request from now on, with nothing logged: exactly the failure that is
+  // reported as "the Workers runtime canceled this request because it detected
+  // that your Worker's code had hung". Unblocking and throwing turns that silent,
+  // permanent hang into one named error, and every later request fails fast on
+  // the same cached rejection instead of timing out.
+  let exitedEarly = false;
+  const settleOnExit = () => {
+    exitedEarly = true;
+    ready();
+  };
+  go.run(instance, createRuntimeContext({ env, binding })).then(settleOnExit, settleOnExit);
+
   await readyPromise;
+  if (exitedEarly) {
+    throw new Error(
+      "goflare: Go main() returned without registering a request handler — " +
+        "check the Worker's logs for the error it printed before returning"
+    );
+  }
 }
 
 // ensureStarted is deliberately NOT async: the check-and-assign must complete

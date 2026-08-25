@@ -106,6 +106,24 @@ compartida: `wasm_exec_worker.js` sólo aísla la propiedad `context` por
 instancia, así que cualquier otro nombre global es un único objeto compartido por
 todo el isolate.
 
+### Si `main()` retorna sin registrar el handler
+
+Como el arranque se cachea para toda la vida del isolate, un `main()` que retorna
+antes de llamar a `Handle()` dejaría el arranque pendiente y colgaría **todas**
+las peticiones siguientes sin registrar nada. `worker.mjs` observa la promesa de
+`go.run` justamente para evitarlo y falla con:
+
+```
+goflare: Go main() returned without registering a request handler — check the
+Worker's logs for the error it printed before returning
+```
+
+> *Si ves ese error, la causa está en lo que tu `main()` imprimió antes de
+> retornar — típicamente un binding o un secreto ausente. Sin esta comprobación
+> el síntoma sería un cuelgue mudo que Cloudflare reporta como `the Workers
+> runtime canceled this request because it detected that your Worker's code had
+> hung`, sin ninguna pista del origen.*
+
 ---
 
 ## Variables de Entorno
