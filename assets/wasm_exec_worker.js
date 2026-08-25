@@ -295,12 +295,19 @@
 					},
 				},
 				gojs: {
-					// func ticks() float64
+					// func ticks() int64
+					//
+					// int64 nanoseconds, returned as a BigInt. Both halves matter: TinyGo
+					// declares this import as i64, so handing back a plain Number traps the
+					// module with "Cannot convert <n> to a BigInt" — and because the runtime
+					// reads the clock during package initialization, that trap fires before
+					// main() gets to run, in any Worker that touches time even transitively.
+					// Keep this in step with TinyGo's own targets/wasm_exec.js.
 					"runtime.ticks": () => {
-						return timeOrigin + performance.now();
+						return BigInt((timeOrigin + performance.now()) * 1e6);
 					},
 
-					// func sleepTicks(timeout float64)
+					// func sleepTicks(timeout int64)
 					"runtime.sleepTicks": (timeout) => {
 						// Do not sleep, only reactivate scheduler after the given timeout.
 						setTimeout(() => {
@@ -310,7 +317,7 @@
 							} catch (e) {
 								if (e !== wasmExit) throw e;
 							}
-						}, timeout);
+						}, Number(timeout) / 1e6);
 					},
 
 					// func finalizeRef(v ref)
