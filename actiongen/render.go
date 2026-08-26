@@ -9,7 +9,7 @@ const HeaderGenerated = `# ARCHIVO GENERADO — no lo edites a mano.
 # Lo produce actiongen y lo mantiene sincronizado un test.
 # Para cambiarlo, edita action_data.go y corre: gotest ./...`
 
-// Render produce el YAML de la action. Es determinista.
+// Render produces the action YAML. It is deterministic.
 func (a Action) Render() []byte {
 	var sb strings.Builder
 

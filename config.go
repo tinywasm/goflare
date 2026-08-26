@@ -28,10 +28,10 @@ const (
 	HTMLHandlingDefault      = "auto-trailing-slash"
 )
 
-// WorkerFirstRoutes son los prefijos que Cloudflare debe enviar al Worker antes
-// que a los assets estaticos. No es configuracion del proyecto: /api/ es la
-// convencion de rutas de tinywasm/router y /oauth/ lo monta tinywasm/user. Un
-// proyecto que use el ecosistema queda correcto sin declarar nada.
+// WorkerFirstRoutes are the prefixes Cloudflare must send to the Worker ahead
+// of the static assets. This is not project configuration: /api/ is the route
+// convention of tinywasm/router and /oauth/ is mounted by tinywasm/user. A
+// project using the ecosystem is correct without declaring anything.
 var WorkerFirstRoutes = []string{"/api/*", "/oauth/*"}
 
 // LoadConfigFromEnv reads a .env file and populates Config.

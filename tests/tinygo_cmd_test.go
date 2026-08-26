@@ -1,3 +1,5 @@
+//go:build !wasm
+
 package goflare_test
 
 import (

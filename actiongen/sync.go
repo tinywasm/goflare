@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-// Sync escribe el YAML de a en path si difiere de lo que ya hay.
+// Sync writes a's YAML to path when it differs from what is already there.
 func Sync(path string, a Action) (changed bool, err error) {
 	rendered := a.Render()
 

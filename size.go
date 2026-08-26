@@ -11,39 +11,39 @@ import (
 )
 
 const (
-	// WasmWarnSizeKiB es el umbral de aviso sobre el tamaño CRUDO.
+	// WasmWarnSizeKiB is the warning threshold, measured on the RAW size.
 	WasmWarnSizeKiB = 256
 
-	// WasmMaxSizeKiB es el presupuesto PROPIO de goflare, no un limite de Cloudflare.
+	// WasmMaxSizeKiB is goflare's OWN budget, not a Cloudflare limit.
 	WasmMaxSizeKiB = 900
 
-	// EnvKeyWasmWarnSizeKiB permite subir o bajar el aviso sin recompilar.
+	// EnvKeyWasmWarnSizeKiB raises or lowers the warning without a rebuild.
 	EnvKeyWasmWarnSizeKiB = "WASM_WARN_SIZE_KIB"
 
-	// EnvKeyWasmMaxSizeKiB permite subir o bajar el corte duro sin recompilar.
+	// EnvKeyWasmMaxSizeKiB raises or lowers the hard cut-off without a rebuild.
 	EnvKeyWasmMaxSizeKiB = "WASM_MAX_SIZE_KIB"
 
-	// WasmArtifactName es el nombre estandar del binario WASM del Worker.
+	// WasmArtifactName is the standard name of the Worker's WASM binary.
 	WasmArtifactName = "edge.wasm"
 
 	bytesPerKiB = 1024
 )
 
 const (
-	wasmSizeReportFmt = "%s: %d B crudo (%.1f KiB) | %d B gzip (%.1f KiB)"
-	wasmWarnMsgFmt    = "warning: %s pesa %.1f KiB crudo, sobre el umbral de aviso de %.1f KiB — cada KiB se paga en tiempo de arranque del isolate (Cloudflare da 1 s). El limite duro de Cloudflare es sobre el gzip: 3 MB en Free, 10 MB en Paid."
-	wasmErrMsgFmt     = "%s pesa %.1f KiB crudo, sobre el presupuesto de %.1f KiB que impone goflare — despliegue detenido antes de gastar la subida. Este presupuesto es de goflare, no de Cloudflare (cuyo limite es 3 MB gzip en Free). Reduce el binario o sube WASM_MAX_SIZE_KIB."
+	wasmSizeReportFmt = "%s: %d B raw (%.1f KiB) | %d B gzip (%.1f KiB)"
+	wasmWarnMsgFmt    = "warning: %s weighs %.1f KiB raw, over the %.1f KiB warning threshold — every KiB is paid in isolate startup time (Cloudflare allows 1 s). Cloudflare's hard limit is on the gzip size: 3 MB on Free, 10 MB on Paid."
+	wasmErrMsgFmt     = "%s weighs %.1f KiB raw, over the %.1f KiB budget goflare imposes — deploy stopped before spending the upload. This budget is goflare's, not Cloudflare's (whose limit is 3 MB gzip on Free). Shrink the binary or raise WASM_MAX_SIZE_KIB."
 )
 
-// WasmSizes son las dos magnitudes que importan de un artefacto del edge: la
-// cruda, que es la que el isolate compila e instancia, y la comprimida, que es
-// la que Cloudflare pesa contra su limite.
+// WasmSizes holds the two figures that matter for an edge artifact: the raw
+// one, which is what the isolate compiles and instantiates, and the compressed
+// one, which is what Cloudflare weighs against its limit.
 type WasmSizes struct {
 	Raw  int64
 	Gzip int64
 }
 
-// MeasureWasm devuelve el tamaño crudo y el comprimido con gzip del archivo.
+// MeasureWasm returns the file's raw size and its gzip-compressed size.
 func MeasureWasm(path string) (WasmSizes, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -91,8 +91,8 @@ func wasmMaxSizeBytes() int64 {
 	return WasmMaxSizeKiB * bytesPerKiB
 }
 
-// CheckWasmSize mide el artefacto, escribe SIEMPRE el reporte en log, avisa si
-// supera el umbral de aviso, y devuelve error si supera el presupuesto.
+// CheckWasmSize measures the artifact, ALWAYS writes the report to log, warns
+// when it passes the warning threshold, and errors when it passes the budget.
 func CheckWasmSize(path string, log func(...any)) error {
 	sizes, err := MeasureWasm(path)
 	if err != nil {
