@@ -2,8 +2,9 @@
 PLAN: "feat!: goflare deploys from one binary — GitHub Action, size gate, automated releases"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 9527680915063316492
+PR: https://github.com/tinywasm/goflare/pull/26
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
