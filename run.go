@@ -189,8 +189,8 @@ Commands:
   auth      Validate CLOUDFLARE_API_TOKEN from environment
   build     Build the project (compiles WASM and/or copies assets)
   deploy    Deploy the project to Cloudflare (requires CLOUDFLARE_API_TOKEN env var)
-  size      Desglosa el tamaño del wasm del edge por paquete y lista imports prohibidos
-  tinygo    Instala TinyGo si falta e imprime su directorio bin y su versión
+  size      Break down the edge wasm size per package and list forbidden imports
+  tinygo    Install TinyGo when missing and print its bin directory and version
 
 Flags:
   -env string
