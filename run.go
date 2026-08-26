@@ -6,6 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/tinywasm/gobuild"
 )
 
 // RunAuth runs the auth command.
@@ -60,6 +65,63 @@ func RunBuild(envPath string, out io.Writer) error {
 	return nil
 }
 
+// FormatTinyGoOutput produce la salida estandar del comando tinygo.
+func FormatTinyGoOutput(dir, version string) string {
+	v := strings.TrimSpace(version)
+	return fmt.Sprintf("%s%s\n%s%s\n", TinyGoBinDirPrefix, dir, TinyGoVersionPrefix, v)
+}
+
+// RunTinyGo instala TinyGo si falta e imprime su bindir y version en stdout.
+func RunTinyGo(out io.Writer) error {
+	dir, version, err := TinyGoBinDir()
+	if err != nil {
+		return err
+	}
+	fmt.Fprint(out, FormatTinyGoOutput(dir, version))
+	return nil
+}
+
+// RunSize runs the size diagnostic subcommand.
+func RunSize(envPath string, out io.Writer) error {
+	cfg, err := LoadConfigFromEnv(envPath)
+	if err != nil {
+		return err
+	}
+
+	wasmPath := filepath.Join(cfg.OutputDir, WasmArtifactName)
+	if _, err := os.Stat(wasmPath); err == nil {
+		_ = CheckWasmSize(wasmPath, func(msgs ...any) {
+			fmt.Fprintln(out, msgs...)
+		})
+	}
+
+	entryDir := cfg.Entry
+	if entryDir == "" {
+		entryDir = "edge"
+	}
+
+	if info, err := os.Stat(entryDir); err == nil && info.IsDir() {
+		bd, err := SizeBreakdown(entryDir)
+		if err != nil {
+			fmt.Fprintln(out, "Size breakdown error:", err)
+		} else {
+			fmt.Fprintln(out, bd)
+		}
+	}
+
+	entryPkg := "./" + entryDir
+	chains, err := ForbiddenImports(".", entryPkg)
+	if err != nil {
+		fmt.Fprintln(out, "Check forbidden imports error:", err)
+	} else if len(chains) == 0 {
+		fmt.Fprintln(out, "sin imports de stdlib prohibidos alcanzados directamente")
+	} else {
+		fmt.Fprintln(out, gobuild.FormatChains(chains))
+	}
+
+	return nil
+}
+
 // RunDeploy runs the deploy command.
 func RunDeploy(envPath string, out io.Writer) error {
 	cfg, err := LoadConfigFromEnv(envPath)
@@ -68,6 +130,10 @@ func RunDeploy(envPath string, out io.Writer) error {
 	}
 
 	if err := cfg.ValidateDeploy(); err != nil {
+		return err
+	}
+
+	if err := CheckVersionSkew("."); err != nil {
 		return err
 	}
 
@@ -123,6 +189,8 @@ Commands:
   auth      Validate CLOUDFLARE_API_TOKEN from environment
   build     Build the project (compiles WASM and/or copies assets)
   deploy    Deploy the project to Cloudflare (requires CLOUDFLARE_API_TOKEN env var)
+  size      Desglosa el tamaño del wasm del edge por paquete y lista imports prohibidos
+  tinygo    Instala TinyGo si falta e imprime su directorio bin y su versión
 
 Flags:
   -env string

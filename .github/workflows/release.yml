@@ -1,0 +1,34 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: gorelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          go run github.com/tinywasm/devflow/cmd/gorelease@latest "${GITHUB_REF_NAME}"
+
+      - name: mover el tag v1
+        run: |
+          set -euo pipefail
+          git tag -f v1 "${GITHUB_SHA}"
+          git push origin -f v1

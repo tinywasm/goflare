@@ -20,14 +20,19 @@ require (
 	github.com/smallstep/truststore v0.13.0 // indirect
 	github.com/tinywasm/await v0.1.0 // indirect
 	github.com/tinywasm/color v0.1.1 // indirect
+	github.com/tinywasm/command v0.0.2 // indirect
 	github.com/tinywasm/font v0.0.4 // indirect
+	github.com/tinywasm/git v0.0.6 // indirect
+	github.com/tinywasm/gobuild v0.0.27 // indirect
 	github.com/tinywasm/image v0.1.0 // indirect
 	github.com/tinywasm/js v0.0.4 // indirect
-	github.com/tinywasm/modfind v0.0.4 // indirect
+	github.com/tinywasm/modfind v0.0.8 // indirect
 	github.com/tinywasm/storage v0.0.2 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/image v0.45.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/term v0.45.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 	howett.net/plist v1.0.0 // indirect
 )

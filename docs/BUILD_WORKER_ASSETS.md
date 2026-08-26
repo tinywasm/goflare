@@ -9,7 +9,7 @@
 Cualquier proyecto con `edge/main.go` genera exactamente el mismo par de artefactos en `.build/`:
 
 - `.build/edge.js` — el pegamento JavaScript empaquetado y minificado.
-- `.build/edge.wasm` — el binario compilado de Go (máximo 1 MiB en el plan Free).
+- `.build/edge.wasm` — el binario compilado de Go (goflare valida el presupuesto de 900 KiB crudo).
 
 Si el proyecto contiene `web/public/`, sus archivos se procesan como assets estáticos.
 

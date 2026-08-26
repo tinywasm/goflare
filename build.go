@@ -46,10 +46,6 @@ func (g *Goflare) Build() error {
 }
 
 const (
-	// maxWasmSize is the Cloudflare Workers Free limit for the WASM binary.
-	// https://developers.cloudflare.com/workers/platform/limits/#worker-size
-	maxWasmSize = 1 * 1024 * 1024 // 1 MiB
-
 	// CompilerModeStdlib compila el frontend con el Go estandar en vez de TinyGo:
 	// binario grande, compilacion rapida, sin minificar. Es el modo de desarrollo.
 	CompilerModeStdlib = "L"
@@ -65,22 +61,6 @@ func siteMode(compilerMode string) sitec.Mode {
 		return sitec.ModeDev
 	}
 	return sitec.ModeRelease
-}
-
-func checkWasmSize(path string) error {
-	info, err := os.Stat(path)
-	if err != nil {
-		return fmt.Errorf("wasm size check: %w", err)
-	}
-	size := info.Size()
-	if size > maxWasmSize {
-		return fmt.Errorf(
-			"edge.wasm exceeds Cloudflare Free limit: %d bytes (%.1f KiB) > 1 MiB — "+
-				"reduce binary size or upgrade to a paid plan",
-			size, float64(size)/1024,
-		)
-	}
-	return nil
 }
 
 // moveFile renames src to dst, falling back to copy+delete across filesystems.
@@ -120,7 +100,7 @@ func (g *Goflare) buildWorker() error {
 	}
 
 	// 5. Move files from staging to OutputDir
-	for _, name := range []string{"edge.wasm", "edge.js"} {
+	for _, name := range []string{WasmArtifactName, "edge.js"} {
 		src := filepath.Join(g.stagingDir, name)
 		dst := filepath.Join(g.Config.OutputDir, name)
 		if err := moveFile(src, dst); err != nil && !os.IsNotExist(err) {
@@ -129,8 +109,8 @@ func (g *Goflare) buildWorker() error {
 	}
 
 	// 6. Check WASM size
-	wasmPath := filepath.Join(g.Config.OutputDir, "edge.wasm")
-	if err := checkWasmSize(wasmPath); err != nil {
+	wasmPath := filepath.Join(g.Config.OutputDir, WasmArtifactName)
+	if err := CheckWasmSize(wasmPath, g.Logger); err != nil {
 		return err
 	}
 

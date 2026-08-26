@@ -1,84 +1,85 @@
-# CI con GitHub Actions
+# CI con GitHub Actions — Action `tinywasm/goflare`
 
-GoFlare está diseñado para que el despliegue ocurra exclusivamente en CI.
+GoFlare se despliega en GitHub Actions usando la action oficial `tinywasm/goflare@v1`. No requiere instalar Node.js, Wrangler ni compilar `goflare` desde fuente.
 
-## Variables requeridas
+## Uso rápido
 
-| Variable | Tipo GitHub | Descripción |
-|---|---|---|
-| `CLOUDFLARE_API_TOKEN` | Secret | Token con permiso **Cloudflare Pages: Edit** |
-| `CLOUDFLARE_ACCOUNT_ID` | Secret | ID de tu cuenta Cloudflare (no es secreto, pero se trata como tal por convención) |
-| `PROJECT_NAME` | En el workflow | Nombre del proyecto de Cloudflare Pages (valor público, hardcodear en el workflow) |
-
-## Cómo crear el API Token
-
-`goflare deploy` solo usa la API de Cloudflare Pages
-(`/accounts/{id}/pages/projects/{name}/deployments`).
-El token debe tener **exactamente** este permiso:
-
-| Tipo de token | Dónde crearlo | Permiso requerido |
-|---|---|---|
-| **User API Token** | Dashboard → My Profile → API Tokens → Create Token | **Cloudflare Pages: Edit** |
-
-> **Account API Tokens** (Dashboard → Manage Account → API Tokens) también funcionan,
-> pero Cloudflare los recomienda para credenciales no asociadas a un usuario específico.
-> Para uso personal en CI, el User API Token es más simple.
-
-**Pasos exactos:**
-1. Ir a [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens)
-2. **Create Token** → **Use template** → busca **"Edit Cloudflare Pages"** (o crea custom)
-3. Permisos mínimos:
-   - `Account` → `Cloudflare Pages` → `Edit`
-4. Seleccionar la cuenta correcta en "Account Resources"
-5. Crear el token y copiarlo (solo se muestra una vez)
-
-**Configurar en GitHub:**
-```bash
-gh secret set CLOUDFLARE_API_TOKEN --body "tu-token"
-gh secret set CLOUDFLARE_ACCOUNT_ID --body "tu-account-id"
+```yaml
+- uses: actions/checkout@v4
+- uses: tinywasm/goflare@v1
+  with:
+    worker: mi-worker
+    domain: mi-worker.ejemplo.cl
+    d1-binding: DB
+  env:
+    CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
 ```
 
-Para obtener tu Account ID:
-```bash
-# Via goflare MCP o dashboard: dash.cloudflare.com → sidebar inferior izquierdo
-```
+## Inputs y Variables de Entorno
 
-## Error frecuente: Account API Token con permisos de Page Shield
+| Input | Requerido | Default | Variable de Entorno Asociada |
+|---|---|---|---|
+| `worker` | **sí** | — | `WORKER_NAME` |
+| `project` | no | `''` | `PROJECT_NAME` (si está vacío usa `worker`) |
+| `domain` | no | `''` | `DOMAIN` |
+| `d1-binding` | no | `''` | `D1_DATABASE_NAME` |
+| `r2-binding` | no | `''` | `R2_BUCKET_NAME` |
+| `compatibility-date` | no | `''` | `COMPATIBILITY_DATE` |
+| `not-found-handling` | no | `''` | `NOT_FOUND_HANDLING` |
+| `version` | no | `''` | Versión del binario de `goflare` a descargar |
+| `setup-go` | no | `'true'` | Ejecuta `actions/setup-go@v5` con el `go.mod` |
+| `vet` | no | `'true'` | Ejecuta `go vet ./...` |
+| `test` | no | `'./tests/...'` | Patrón para `go test` (vacío = omitir) |
+| `pre-deploy` | no | `''` | Comando a ejecutar entre build y deploy |
+| `deploy` | no | `'true'` | Ejecutar el paso de despliegue (`'false'` en PRs) |
+| `cache` | no | `'true'` | Cachear el árbol instalado de TinyGo |
 
-El token `TINYWASM_TOKEN` o similares creados desde **Manage Account → API Tokens**
-con permisos de "Domain Page Shield" / "Page Shield" NO funcionan para deploy —
-son permisos de seguridad web, no de despliegue.
+### Inputs vs Secretos
 
-Síntoma: `CF API error: Invalid API Token (code: 1000)`
-Solución: Crear un nuevo **User API Token** con `Cloudflare Pages: Edit`.
+- **Inputs:** Opciones de configuración del proyecto (`worker`, `domain`, `d1-binding`, etc.).
+- **Secretos:** Credenciales de autenticación (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `D1_DATABASE_ID`, `R2_BUCKET_ID`).
 
-## Workflow de ejemplo
+> ⚠️ **Los secretos NUNCA son inputs.** Pasar secretos como inputs de una composite action los expone en los logs de depuración de GitHub Actions. Pásalos siempre mediante `env:`.
+
+## Resolución de Versiones
+
+El binario de `goflare` se descarga automáticamente según las siguientes reglas:
+1. `inputs.version` si está especificado.
+2. `github.action_ref` si la action se invoca con un tag semver completo (ej: `uses: tinywasm/goflare@v0.5.22`).
+3. El tag pre-horneado en `action.yml` (ej: al usar `@v1`).
+
+### Desfase de una versión en `@v1`
+
+En el commit del tag `vX.Y.Z`, `action.yml` hornea la versión `v(X.Y.Z-1)` (el último release cuyas descargas de binarios ya están disponibles). Esto es deliberado y previene fallos 404 durante la publicación del release. Quien requiera la versión exacta en el tag puede fijarla con `uses: tinywasm/goflare@vX.Y.Z`.
+
+## Compilar sin desplegar en Pull Requests
 
 ```yaml
 name: Deploy
 on:
   push:
     branches: [main]
+  pull_request:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install goflare
-        run: |
-          curl -fsSL https://github.com/tinywasm/goflare/releases/download/v0.2.23/goflare-linux-amd64 \
-            -o /usr/local/bin/goflare
-          chmod +x /usr/local/bin/goflare
-
-      - name: Build
-        run: goflare build
-
-      - name: Deploy
+      - uses: tinywasm/goflare@v1
+        with:
+          worker: mi-worker
+          deploy: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          PROJECT_NAME: my-project-name
-        run: goflare deploy
 ```
+
+## Generación de `action.yml`
+
+El archivo `action.yml` en la raíz del repositorio no se edita a mano:
+- Es producido determinísticamente por el paquete `actiongen` en `action_data.go`.
+- El test `TestActionYmlIsInSync` verifica en CI que `action.yml` coincide con el código de Go.
+- Para modificar la action, edita `action_data.go` y ejecuta los tests de Go.

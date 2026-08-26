@@ -54,19 +54,26 @@ go install github.com/tinywasm/goflare/cmd/goflare@latest
 - `goflare auth --check`: Validate `CLOUDFLARE_API_TOKEN` from environment.
 - `goflare build`: Build edge function into `.build/` and static site assets into `web/public/`.
 - `goflare deploy`: Single path deployment to Cloudflare Workers with assets. ⚠️ Designed for CI/CD environments.
+- `goflare size`: Desglosa el tamaño del wasm del edge por paquete y lista imports prohibidos.
+- `goflare tinygo`: Instala TinyGo si falta e imprime su directorio bin y su versión.
 
 ## GitHub Setup
-Deployment is designed to run in CI. Register secrets in:
-GitHub → Settings → Secrets and variables → Actions.
+Deployment is designed to run in CI with a single action line:
 
-| Name | Type | Description |
-|---|---|---|
-| `CLOUDFLARE_API_TOKEN` | Secret | API Token with Workers permissions |
-| `CLOUDFLARE_ACCOUNT_ID` | Secret | Your Cloudflare Account ID |
-| `D1_DATABASE_ID` | Variable | D1 database ID (optional) |
-| `R2_BUCKET_ID` | Variable | R2 bucket ID (optional) |
+```yaml
+- uses: actions/checkout@v4
+- uses: tinywasm/goflare@v1
+  with:
+    worker: mi-worker
+    domain: mi-worker.ejemplo.cl
+    d1-binding: DB
+  env:
+    CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+```
 
-For more details see [CI_D1_SECRETS.md](docs/CI_D1_SECRETS.md).
+For more details see [CI_GITHUB_ACTIONS.md](docs/CI_GITHUB_ACTIONS.md) and [CI_D1_SECRETS.md](docs/CI_D1_SECRETS.md).
 
 ## Edge function entrypoint
 `edge/main.go` (runtime lives in `tinywasm/cloudflare`):
@@ -100,7 +107,7 @@ outside a Worker, where `cloudflare/d1.NewEdge` doesn't exist. See
 ## ⚠️ Critical: NO heavy stdlib in wasm code
 Files with `//go:build wasm` (everything under `edge/`, `routes/`, `modules/`, `tinywasm/cloudflare`) **NEVER** import `fmt`, `strings`, `errors`, `encoding/*`, `net/http`, `log`, `io/ioutil`. Use `tinywasm/fmt`, `tinywasm/json`, `tinywasm/strings`, `tinywasm/fetch` instead.
 
-Stdlib inflates the wasm binary ~80% and exceeds Cloudflare Free's 1 MiB limit. TinyGo also does not fully support `net/http` in `js/wasm`.
+Stdlib inflates the wasm binary ~80%. `goflare` warns at 256 KiB raw and aborts build at 900 KiB raw to preserve fast cold-start instantiation. TinyGo also does not fully support `net/http` in `js/wasm`.
 
 Verification: `grep -rE '^\s*"(fmt|strings|errors|encoding|net/http|log|io/ioutil)"' edge/ routes/ modules/ $(go env GOPATH)/pkg/mod/github.com/tinywasm/cloudflare*` must return empty — edge runtime lives in `tinywasm/cloudflare`.
 

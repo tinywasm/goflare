@@ -1,0 +1,174 @@
+# ARCHIVO GENERADO — no lo edites a mano.
+# Lo produce actiongen y lo mantiene sincronizado un test.
+# Para cambiarlo, edita action_data.go y corre: gotest ./...
+
+name: Deploy with goflare
+description: Compila un proyecto Go a WASM y lo despliega como Cloudflare Worker
+author: tinywasm
+branding:
+  icon: upload-cloud
+  color: orange
+inputs:
+  version:
+    description: qué release de goflare descargar; vacío = resolución automática
+    required: false
+  project:
+    description: PROJECT_NAME; vacío = el valor de worker
+    required: false
+  worker:
+    description: WORKER_NAME
+    required: true
+  domain:
+    description: DOMAIN
+    required: false
+  d1-binding:
+    description: D1_DATABASE_NAME
+    required: false
+  r2-binding:
+    description: R2_BUCKET_NAME
+    required: false
+  compatibility-date:
+    description: COMPATIBILITY_DATE
+    required: false
+  not-found-handling:
+    description: NOT_FOUND_HANDLING
+    required: false
+  setup-go:
+    description: correr actions/setup-go con el go.mod del proyecto
+    required: false
+    default: 'true'
+  vet:
+    description: correr go vet ./...
+    required: false
+    default: 'true'
+  test:
+    description: patrón para go test; vacío = no correr tests
+    required: false
+    default: ./tests/...
+  pre-deploy:
+    description: comando a correr entre build y deploy
+    required: false
+  deploy:
+    description: 'poner ''false'' en pull requests para compilar sin desplegar'
+    required: false
+    default: 'true'
+  cache:
+    description: cachear el árbol de TinyGo
+    required: false
+    default: 'true'
+outputs:
+  goflare-version:
+    description: la versión que se resolvió y descargó
+    value: '${{ steps.goflare.outputs.version }}'
+  tinygo-version:
+    description: lo que reporta tinygo version
+    value: '${{ steps.tinygo.outputs.version }}'
+runs:
+  using: composite
+  steps:
+    # La versión sale del go.mod del proyecto, así que la elige el llamador, no nosotros. setup-go además cachea ~/go/pkg/mod y ~/.cache/go-build por su cuenta, con key derivada de go.sum.
+    - name: Setup Go
+      if: 'inputs.setup-go == ''true'''
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+    - name: Resolver y descargar el binario de goflare
+      id: goflare
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        version="${{ inputs.version }}"
+        if [ -z "$version" ]; then
+          ref="${{ github.action_ref }}"
+          case "$ref" in
+            v[0-9]*.[0-9]*.[0-9]*) version="$ref" ;;
+            *) version="v0.5.22" ;;
+          esac
+        fi
+
+        case "$(uname -s)-$(uname -m)" in
+          Linux-x86_64)  asset=goflare-linux-amd64 ;;
+          Linux-aarch64) asset=goflare-linux-arm64 ;;
+          Darwin-arm64)  asset=goflare-darwin-arm64 ;;
+          Darwin-x86_64) asset=goflare-darwin-amd64 ;;
+          *) echo "goflare: plataforma no soportada: $(uname -s)-$(uname -m)" >&2; exit 1 ;;
+        esac
+
+        url="https://github.com/tinywasm/goflare/releases/download/${version}/${asset}"
+        dest="${RUNNER_TEMP}/goflare"
+
+        if ! curl -fsSL "$url" -o "$dest"; then
+          echo "goflare: no existe el binario ${asset} en el release ${version}." >&2
+          echo "  URL: ${url}" >&2
+          echo "  Lo mas probable es que gorelease no haya corrido para ese tag." >&2
+          echo "  Revisa https://github.com/tinywasm/goflare/releases y fija una version que si tenga binarios con el input 'version'." >&2
+          exit 1
+        fi
+
+        chmod +x "$dest"
+        echo "$(dirname "$dest")" >> "$GITHUB_PATH"
+        echo "version=${version}" >> "$GITHUB_OUTPUT"
+    # Se cachea el árbol instalado, no el tarball: un acierto no cuesta ni descarga ni extracción. La versión va dentro de la key a propósito. Las keys de actions/cache son inmutables —un acierto nunca vuelve a guardar—, así que una key sin versión se queda clavada en un árbol viejo cuando la versión de TinyGo sube, y a partir de ahí cada corrida paga el restore y además la descarga completa. El generador mantiene esta cifra al día.
+    - name: Restaurar la caché de TinyGo
+      if: 'inputs.cache == ''true'''
+      uses: actions/cache@v4
+      with:
+        path: |
+          /usr/local/tinygo
+          ~/.local/tinygo
+        key: 'tinygo-${{ runner.os }}-${{ runner.arch }}-0.41.1'
+    # TinyGo lo instala el propio binario de goflare, vía tinywasm/tinygo. A propósito no se usa uses: tinywasm/tinygo@v1: esa action instala la versión del ref con que se la invoca, mientras sitec la vuelve a resolver durante el build. Serían dos fuentes, y el día que dejen de coincidir, sitec desinstala lo que puso la action y descarga lo suyo. Con el binario como único instalador hay una sola fuente. Este paso va antes de los tests porque algunos proyectos invocan el binario tinygo pelado desde el PATH durante go test.
+    - name: Instalar TinyGo
+      id: tinygo
+      shell: bash
+      run: |
+        set -euo pipefail
+        out="$(goflare tinygo)"
+        bindir="${out#*TINYGO_BINDIR=}"
+        bindir="${bindir%%$'\n'*}"
+        version="$(printf '%s' "$out" | sed -n 's/^TINYGO_VERSION=//p')"
+
+        if [ -z "$bindir" ]; then
+          echo "goflare tinygo no devolvio un directorio bin" >&2
+          exit 1
+        fi
+
+        echo "$bindir" >> "$GITHUB_PATH"
+        echo "version=${version}" >> "$GITHUB_OUTPUT"
+    - name: go vet
+      if: 'inputs.vet == ''true'''
+      shell: bash
+      run: go vet ./...
+    - name: go test
+      if: 'inputs.test != '''''
+      shell: bash
+      run: 'go test ${{ inputs.test }}'
+    - name: goflare build
+      shell: bash
+      run: goflare build
+      env:
+        PROJECT_NAME: '${{ inputs.project || inputs.worker }}'
+        WORKER_NAME: '${{ inputs.worker }}'
+        DOMAIN: '${{ inputs.domain }}'
+        D1_DATABASE_NAME: '${{ inputs.d1-binding }}'
+        R2_BUCKET_NAME: '${{ inputs.r2-binding }}'
+        COMPATIBILITY_DATE: '${{ inputs.compatibility-date }}'
+        NOT_FOUND_HANDLING: '${{ inputs.not-found-handling }}'
+    # Aquí es donde va la migración del esquema, que corre una vez por despliegue y no una vez por arranque de isolate.
+    - name: Comando pre-deploy
+      if: 'inputs.pre-deploy != '''' && inputs.deploy == ''true'''
+      shell: bash
+      run: '${{ inputs.pre-deploy }}'
+    - name: goflare deploy
+      if: 'inputs.deploy == ''true'''
+      shell: bash
+      run: goflare deploy
+      env:
+        PROJECT_NAME: '${{ inputs.project || inputs.worker }}'
+        WORKER_NAME: '${{ inputs.worker }}'
+        DOMAIN: '${{ inputs.domain }}'
+        D1_DATABASE_NAME: '${{ inputs.d1-binding }}'
+        R2_BUCKET_NAME: '${{ inputs.r2-binding }}'
+        COMPATIBILITY_DATE: '${{ inputs.compatibility-date }}'
+        NOT_FOUND_HANDLING: '${{ inputs.not-found-handling }}'

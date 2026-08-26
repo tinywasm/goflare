@@ -37,6 +37,21 @@ func main() {
 			os.Exit(1)
 		}
 
+	case "size":
+		fs := flag.NewFlagSet("size", flag.ExitOnError)
+		env := fs.String("env", ".env", "path to .env file")
+		fs.Parse(args)
+		if err := goflare.RunSize(*env, os.Stdout); err != nil {
+			fmt.Fprintln(os.Stderr, "Error:", err)
+			os.Exit(1)
+		}
+
+	case "tinygo":
+		if err := goflare.RunTinyGo(os.Stdout); err != nil {
+			fmt.Fprintln(os.Stderr, "Error:", err)
+			os.Exit(1)
+		}
+
 	case "deploy":
 		fs := flag.NewFlagSet("deploy", flag.ExitOnError)
 		env := fs.String("env", ".env", "path to .env file")

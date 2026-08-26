@@ -25,22 +25,52 @@ func (g *Goflare) generateWasmFile() error {
 	return os.WriteFile(targetPath, out.Binary, 0644)
 }
 
+const (
+	// TinyGoVersion es la version de TinyGo que este binario de goflare instalara.
+	TinyGoVersion = tinygo.DefaultVersion
+
+	// TinyGoBinDirPrefix marca la linea de stdout que lleva el directorio.
+	TinyGoBinDirPrefix = "TINYGO_BINDIR="
+
+	// TinyGoVersionPrefix marca la linea de stdout que lleva la version.
+	TinyGoVersionPrefix = "TINYGO_VERSION="
+)
+
+// TinyGoBinDir instala TinyGo si falta y devuelve el directorio que contiene el
+// binario, junto con la version que reporta.
+func TinyGoBinDir() (dir, version string, err error) {
+	installedPath, err := tinygo.EnsureInstalled()
+	if err != nil {
+		return "", "", fmt.Errorf("tinygo setup: %w", err)
+	}
+
+	binDir := filepath.Dir(installedPath)
+
+	cmd := exec.Command(installedPath, "version")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", "", fmt.Errorf("tinygo version check: %w", err)
+	}
+
+	return binDir, string(out), nil
+}
+
 // EnsureTinyGo installs TinyGo if absent and guarantees its bin dir is in PATH
 // before any compilation attempt. Safe to call multiple times (idempotent).
 func EnsureTinyGo(out io.Writer) error {
-	installedPath, err := tinygo.EnsureInstalled()
+	binDir, _, err := TinyGoBinDir()
 	if err != nil {
-		return fmt.Errorf("tinygo setup: %w", err)
+		return err
 	}
+
 	if _, lookErr := exec.LookPath("tinygo"); lookErr != nil {
-		binDir := filepath.Dir(installedPath)
 		current := os.Getenv("PATH")
 		if current != "" {
 			os.Setenv("PATH", current+string(os.PathListSeparator)+binDir)
 		} else {
 			os.Setenv("PATH", binDir)
 		}
-		fmt.Fprintln(out, "TinyGo ready:", installedPath)
+		fmt.Fprintln(out, "TinyGo ready:", filepath.Join(binDir, "tinygo"))
 	}
 	return nil
 }
