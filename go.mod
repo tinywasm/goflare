@@ -6,7 +6,7 @@ require (
 	github.com/tdewolff/minify/v2 v2.24.12
 	github.com/tinywasm/cloudflare v0.0.11
 	github.com/tinywasm/ddl v0.0.12
-	github.com/tinywasm/git v0.0.6
+	github.com/tinywasm/git v0.0.7
 	github.com/tinywasm/gobuild v0.0.27
 	github.com/tinywasm/modfind v0.0.8
 	github.com/tinywasm/server v0.2.42
