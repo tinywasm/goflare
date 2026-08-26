@@ -61,7 +61,7 @@ func (p *Panel) RootCSS() *css.Stylesheet { return css.Theme() }
 	tidy.Dir = dir
 	tidy.Env = append(os.Environ(), "GOFLAGS=-mod=mod")
 	if out, err := tidy.CombinedOutput(); err != nil {
-		t.Skipf("sin acceso al modulo cache/red para resolver el fixture: %v\n%s", err, out)
+		t.Skipf("no module cache/network access to resolve the fixture: %v\n%s", err, out)
 	}
 
 	cfg := &goflare.Config{

@@ -26,18 +26,18 @@ func (g *Goflare) generateWasmFile() error {
 }
 
 const (
-	// TinyGoVersion es la version de TinyGo que este binario de goflare instalara.
+	// TinyGoVersion is the TinyGo version this goflare binary will install.
 	TinyGoVersion = tinygo.DefaultVersion
 
-	// TinyGoBinDirPrefix marca la linea de stdout que lleva el directorio.
+	// TinyGoBinDirPrefix marks the stdout line carrying the directory.
 	TinyGoBinDirPrefix = "TINYGO_BINDIR="
 
-	// TinyGoVersionPrefix marca la linea de stdout que lleva la version.
+	// TinyGoVersionPrefix marks the stdout line carrying the version.
 	TinyGoVersionPrefix = "TINYGO_VERSION="
 )
 
-// TinyGoBinDir instala TinyGo si falta y devuelve el directorio que contiene el
-// binario, junto con la version que reporta.
+// TinyGoBinDir installs TinyGo when missing and returns the directory holding
+// the binary, along with the version it reports.
 func TinyGoBinDir() (dir, version string, err error) {
 	installedPath, err := tinygo.EnsureInstalled()
 	if err != nil {

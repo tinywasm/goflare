@@ -46,16 +46,16 @@ func (g *Goflare) Build() error {
 }
 
 const (
-	// CompilerModeStdlib compila el frontend con el Go estandar en vez de TinyGo:
-	// binario grande, compilacion rapida, sin minificar. Es el modo de desarrollo.
+	// CompilerModeStdlib builds the frontend with standard Go instead of TinyGo:
+	// large binary, fast build, no minification. This is the development mode.
 	CompilerModeStdlib = "L"
 
-	// moduleRoot es el directorio desde el que corre goflare. Toda ruta de
-	// fuente del proyecto —edge/main.go, web/client.go— se resuelve desde aqui.
+	// moduleRoot is the directory goflare runs from. Every project source path
+	// — edge/main.go, web/client.go — resolves from here.
 	moduleRoot = "."
 )
 
-// siteMode traduce el modo de compilador de goflare al de sitec.
+// siteMode translates goflare's compiler mode into sitec's.
 func siteMode(compilerMode string) sitec.Mode {
 	if compilerMode == CompilerModeStdlib {
 		return sitec.ModeDev
@@ -123,8 +123,8 @@ func (g *Goflare) buildPages() error {
 		return fmt.Errorf("public dir does not exist: %s", g.Config.PublicDir)
 	}
 
-	// 2. sitec recorre el modulo, recoge lo que el proyecto declara, compila
-	//    el WASM del frontend y arma el sitio completo en memoria.
+	// 2. sitec walks the module, collects what the project declares, builds the
+	//    frontend WASM and assembles the whole site in memory.
 	g.Logger("building site →", g.Config.PublicDir)
 	site, err := g.siteBuilder(sitec.BuildConfig{
 		RootDir:   moduleRoot,
@@ -137,7 +137,7 @@ func (g *Goflare) buildPages() error {
 		return fmt.Errorf("site build failed: %w", err)
 	}
 
-	// 3. Nada existe hasta que se vuelca: Build() trabaja en memoria.
+	// 3. Nothing exists until it is flushed: Build() works in memory.
 	if err := site.WriteTo(sitec.NewOsFS()); err != nil {
 		return fmt.Errorf("failed to write site artifacts: %w", err)
 	}

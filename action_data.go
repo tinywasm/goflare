@@ -16,7 +16,7 @@ const (
 	TinyGoCacheKeyFmt  = "tinygo-${{ runner.os }}-${{ runner.arch }}-%s"
 )
 
-// LatestReleaseTag devuelve el tag semver mas alto del repositorio.
+// LatestReleaseTag returns the highest semver tag in the repository.
 func LatestReleaseTag() (string, error) {
 	g, err := git.NewGit()
 	if err != nil {
@@ -29,7 +29,7 @@ func LatestReleaseTag() (string, error) {
 	return strings.TrimSpace(tag), nil
 }
 
-// GoflareAction construye la descripcion de la action de goflare.
+// GoflareAction builds the description of the goflare action.
 func GoflareAction(tinyGoVersion, goflareVersion string) actiongen.Action {
 	if goflareVersion == "" {
 		goflareVersion = "v0.5.22"
@@ -51,17 +51,17 @@ case "$(uname -s)-$(uname -m)" in
   Linux-aarch64) asset=goflare-linux-arm64 ;;
   Darwin-arm64)  asset=goflare-darwin-arm64 ;;
   Darwin-x86_64) asset=goflare-darwin-amd64 ;;
-  *) echo "goflare: plataforma no soportada: $(uname -s)-$(uname -m)" >&2; exit 1 ;;
+  *) echo "goflare: unsupported platform: $(uname -s)-$(uname -m)" >&2; exit 1 ;;
 esac
 
 url="https://github.com/tinywasm/goflare/releases/download/${version}/${asset}"
 dest="${RUNNER_TEMP}/goflare"
 
 if ! curl -fsSL "$url" -o "$dest"; then
-  echo "goflare: no existe el binario ${asset} en el release ${version}." >&2
+  echo "goflare: no ${asset} binary in release ${version}." >&2
   echo "  URL: ${url}" >&2
-  echo "  Lo mas probable es que gorelease no haya corrido para ese tag." >&2
-  echo "  Revisa https://github.com/tinywasm/goflare/releases y fija una version que si tenga binarios con el input 'version'." >&2
+  echo "  The likely cause is that gorelease never ran for that tag." >&2
+  echo "  Check https://github.com/tinywasm/goflare/releases and pin a version that does have binaries via the 'version' input." >&2
   exit 1
 fi
 
@@ -76,7 +76,7 @@ bindir="${bindir%%$'\n'*}"
 version="$(printf '%s' "$out" | sed -n 's/^TINYGO_VERSION=//p')"
 
 if [ -z "$bindir" ]; then
-  echo "goflare tinygo no devolvio un directorio bin" >&2
+  echo "goflare tinygo returned no bin directory" >&2
   exit 1
 fi
 
@@ -95,31 +95,31 @@ echo "version=${version}" >> "$GITHUB_OUTPUT"`
 
 	return actiongen.Action{
 		Name:        "Deploy with goflare",
-		Description: "Compila un proyecto Go a WASM y lo despliega como Cloudflare Worker",
+		Description: "Builds a Go project to WASM and deploys it as a Cloudflare Worker",
 		Author:      "tinywasm",
 		Branding: actiongen.Branding{
 			Icon:  "upload-cloud",
 			Color: "orange",
 		},
 		Inputs: []actiongen.Input{
-			{Name: "version", Description: "qué release de goflare descargar; vacío = resolución automática", Default: "", Required: false},
-			{Name: "project", Description: "PROJECT_NAME; vacío = el valor de worker", Default: "", Required: false},
+			{Name: "version", Description: "which goflare release to download; empty = resolve automatically", Default: "", Required: false},
+			{Name: "project", Description: "PROJECT_NAME; empty = the value of worker", Default: "", Required: false},
 			{Name: "worker", Description: "WORKER_NAME", Required: true},
 			{Name: "domain", Description: "DOMAIN", Default: "", Required: false},
 			{Name: "d1-binding", Description: "D1_DATABASE_NAME", Default: "", Required: false},
 			{Name: "r2-binding", Description: "R2_BUCKET_NAME", Default: "", Required: false},
 			{Name: "compatibility-date", Description: "COMPATIBILITY_DATE", Default: "", Required: false},
 			{Name: "not-found-handling", Description: "NOT_FOUND_HANDLING", Default: "", Required: false},
-			{Name: "setup-go", Description: "correr actions/setup-go con el go.mod del proyecto", Default: "true", Required: false},
-			{Name: "vet", Description: "correr go vet ./...", Default: "true", Required: false},
-			{Name: "test", Description: "patrón para go test; vacío = no correr tests", Default: "./tests/...", Required: false},
-			{Name: "pre-deploy", Description: "comando a correr entre build y deploy", Default: "", Required: false},
-			{Name: "deploy", Description: "poner 'false' en pull requests para compilar sin desplegar", Default: "true", Required: false},
-			{Name: "cache", Description: "cachear el árbol de TinyGo", Default: "true", Required: false},
+			{Name: "setup-go", Description: "run actions/setup-go with the project go.mod", Default: "true", Required: false},
+			{Name: "vet", Description: "run go vet ./...", Default: "true", Required: false},
+			{Name: "test", Description: "pattern for go test; empty = do not run tests", Default: "./tests/...", Required: false},
+			{Name: "pre-deploy", Description: "command to run between build and deploy", Default: "", Required: false},
+			{Name: "deploy", Description: "set to 'false' on pull requests to build without deploying", Default: "true", Required: false},
+			{Name: "cache", Description: "cache the TinyGo tree", Default: "true", Required: false},
 		},
 		Outputs: []actiongen.Output{
-			{Name: "goflare-version", Description: "la versión que se resolvió y descargó", Value: "${{ steps.goflare.outputs.version }}"},
-			{Name: "tinygo-version", Description: "lo que reporta tinygo version", Value: "${{ steps.tinygo.outputs.version }}"},
+			{Name: "goflare-version", Description: "the version that was resolved and downloaded", Value: "${{ steps.goflare.outputs.version }}"},
+			{Name: "tinygo-version", Description: "whatever tinygo version reports", Value: "${{ steps.tinygo.outputs.version }}"},
 		},
 		Steps: []actiongen.Step{
 			{
@@ -127,30 +127,30 @@ echo "version=${version}" >> "$GITHUB_OUTPUT"`
 				If:      "inputs.setup-go == 'true'",
 				Uses:    "actions/setup-go@v5",
 				With:    []actiongen.KeyValue{{Key: "go-version-file", Value: "go.mod"}},
-				Comment: "La versión sale del go.mod del proyecto, así que la elige el llamador, no nosotros. setup-go además cachea ~/go/pkg/mod y ~/.cache/go-build por su cuenta, con key derivada de go.sum.",
+				Comment: "The version comes from the project go.mod, so the caller picks it, not us. setup-go also caches ~/go/pkg/mod and ~/.cache/go-build on its own, keyed off go.sum.",
 			},
 			{
-				Name:  "Resolver y descargar el binario de goflare",
+				Name:  "Resolve and download the goflare binary",
 				ID:    "goflare",
 				Shell: "bash",
 				Run:   downloadScript,
 			},
 			{
-				Name: "Restaurar la caché de TinyGo",
+				Name: "Restore the TinyGo cache",
 				If:   "inputs.cache == 'true'",
 				Uses: "actions/cache@v4",
 				With: []actiongen.KeyValue{
 					{Key: "path", Value: "/usr/local/tinygo\n~/.local/tinygo"},
 					{Key: "key", Value: fmt.Sprintf(TinyGoCacheKeyFmt, tinyGoVersion)},
 				},
-				Comment: "Se cachea el árbol instalado, no el tarball: un acierto no cuesta ni descarga ni extracción. La versión va dentro de la key a propósito. Las keys de actions/cache son inmutables —un acierto nunca vuelve a guardar—, así que una key sin versión se queda clavada en un árbol viejo cuando la versión de TinyGo sube, y a partir de ahí cada corrida paga el restore y además la descarga completa. El generador mantiene esta cifra al día.",
+				Comment: "The installed tree is cached, not the tarball: a hit costs neither a download nor an extraction. The version sits inside the key deliberately. actions/cache keys are immutable — a hit never saves again — so a key without the version stays pinned to a stale tree once the TinyGo version moves, and from then on every run pays the restore plus the full download anyway. The generator keeps this number current.",
 			},
 			{
-				Name:    "Instalar TinyGo",
+				Name:    "Install TinyGo",
 				ID:      "tinygo",
 				Shell:   "bash",
 				Run:     installTinyGoScript,
-				Comment: "TinyGo lo instala el propio binario de goflare, vía tinywasm/tinygo. A propósito no se usa uses: tinywasm/tinygo@v1: esa action instala la versión del ref con que se la invoca, mientras sitec la vuelve a resolver durante el build. Serían dos fuentes, y el día que dejen de coincidir, sitec desinstala lo que puso la action y descarga lo suyo. Con el binario como único instalador hay una sola fuente. Este paso va antes de los tests porque algunos proyectos invocan el binario tinygo pelado desde el PATH durante go test.",
+				Comment: "TinyGo is installed by the goflare binary itself, via tinywasm/tinygo. Using uses: tinywasm/tinygo@v1 is deliberately avoided: that action installs the version of the ref it is invoked with, while sitec resolves it again during the build. That would be two sources, and the day they stop agreeing, sitec uninstalls what the action put there and downloads its own. With the binary as the only installer there is a single source. This step runs before the tests because some projects invoke the bare tinygo binary from PATH during go test.",
 			},
 			{
 				Name:  "go vet",
@@ -171,11 +171,11 @@ echo "version=${version}" >> "$GITHUB_OUTPUT"`
 				Env:   envMapping,
 			},
 			{
-				Name:    "Comando pre-deploy",
+				Name:    "Pre-deploy command",
 				If:      "inputs.pre-deploy != '' && inputs.deploy == 'true'",
 				Shell:   "bash",
 				Run:     "${{ inputs.pre-deploy }}",
-				Comment: "Aquí es donde va la migración del esquema, que corre una vez por despliegue y no una vez por arranque de isolate.",
+				Comment: "This is where schema migration goes: it runs once per deploy, not once per isolate start.",
 			},
 			{
 				Name:  "goflare deploy",

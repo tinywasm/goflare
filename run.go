@@ -65,13 +65,13 @@ func RunBuild(envPath string, out io.Writer) error {
 	return nil
 }
 
-// FormatTinyGoOutput produce la salida estandar del comando tinygo.
+// FormatTinyGoOutput produces the standard output of the tinygo command.
 func FormatTinyGoOutput(dir, version string) string {
 	v := strings.TrimSpace(version)
 	return fmt.Sprintf("%s%s\n%s%s\n", TinyGoBinDirPrefix, dir, TinyGoVersionPrefix, v)
 }
 
-// RunTinyGo instala TinyGo si falta e imprime su bindir y version en stdout.
+// RunTinyGo installs TinyGo when missing and prints its bindir and version to stdout.
 func RunTinyGo(out io.Writer) error {
 	dir, version, err := TinyGoBinDir()
 	if err != nil {

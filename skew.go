@@ -10,16 +10,16 @@ import (
 )
 
 const (
-	// CloudflareModulePath es el modulo del runtime del edge. goflare embebe sus
-	// assets JS; el proyecto compila su codigo Go. Las dos mitades tienen que venir
-	// de la misma version.
+	// CloudflareModulePath is the edge runtime module. goflare embeds its JS
+	// assets; the project compiles its Go code. Both halves have to come from
+	// the same version.
 	CloudflareModulePath = "github.com/tinywasm/cloudflare"
 
-	skewErrFmt = "desajuste de versiones de tinywasm/cloudflare: tu go.mod resuelve %s y este binario de goflare lleva embebidos los assets JS de %s. El pegamento JavaScript y el runtime Go del Worker comparten una ABI; si divergen, el Worker aborta al inicializar paquetes sin dejar mensaje. Corrige con: go get github.com/tinywasm/cloudflare@%s"
+	skewErrFmt = "tinywasm/cloudflare version skew: your go.mod resolves %s while this goflare binary embeds the JS assets of %s. The JavaScript glue and the Worker's Go runtime share an ABI; when they diverge, the Worker traps during package initialization without logging anything. Fix with: go get github.com/tinywasm/cloudflare@%s"
 )
 
-// EmbeddedCloudflareVersion devuelve la version de github.com/tinywasm/cloudflare
-// con la que se compilo ESTE binario.
+// EmbeddedCloudflareVersion returns the github.com/tinywasm/cloudflare version
+// THIS binary was built against.
 func EmbeddedCloudflareVersion() string {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
@@ -33,8 +33,8 @@ func EmbeddedCloudflareVersion() string {
 	return ""
 }
 
-// ProjectCloudflareVersion devuelve la version de github.com/tinywasm/cloudflare
-// que resuelve el go.mod del proyecto en moduleRoot.
+// ProjectCloudflareVersion returns the github.com/tinywasm/cloudflare version
+// the project go.mod in moduleRoot resolves to.
 func ProjectCloudflareVersion(moduleRoot string) (string, error) {
 	f := modfind.New()
 	mods, err := f.Discover(moduleRoot)
@@ -49,7 +49,7 @@ func ProjectCloudflareVersion(moduleRoot string) (string, error) {
 	return "", nil
 }
 
-// CompareVersions implementa la tabla de decision de desajuste de versiones.
+// CompareVersions implements the version-skew decision table.
 func CompareVersions(project, embedded string) error {
 	if project == "" || embedded == "" {
 		return nil
@@ -60,8 +60,8 @@ func CompareVersions(project, embedded string) error {
 	return nil
 }
 
-// CheckVersionSkew falla si el proyecto y este binario resuelven versiones
-// distintas de tinywasm/cloudflare.
+// CheckVersionSkew fails when the project and this binary resolve different
+// versions of tinywasm/cloudflare.
 func CheckVersionSkew(moduleRoot string) error {
 	projVer, err := ProjectCloudflareVersion(moduleRoot)
 	if err != nil {

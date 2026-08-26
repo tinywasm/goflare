@@ -1,3 +1,5 @@
+//go:build !wasm
+
 package goflare_test
 
 import (
@@ -23,8 +25,8 @@ func TestActionYmlIsInSync(t *testing.T) {
 	}
 
 	if changed {
-		t.Fatalf("%s estaba desincronizado y se acaba de regenerar. "+
-			"Revisa el diff y commitealo; despues este test queda verde.",
+		t.Fatalf("%s was out of sync and has just been regenerated. "+
+			"Review the diff and commit it; this test goes green afterwards.",
 			goflare.ActionFilePath)
 	}
 }

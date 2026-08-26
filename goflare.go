@@ -10,13 +10,13 @@ import (
 	"github.com/tinywasm/sitec"
 )
 
-// HeaderIdentity es la cabecera con la que un Worker desplegado por goflare se
-// identifica. Su presencia prueba que la respuesta la produjo el Worker y no la
-// capa de archivos estaticos.
+// HeaderIdentity is the header a goflare-deployed Worker identifies itself
+// with. Its presence proves the response came from the Worker and not from the
+// static file layer.
 const HeaderIdentity = "x-goflare"
 
-// identityValue devuelve la version del modulo goflare en ejecucion, o "dev"
-// cuando no hay informacion de build (checkout local).
+// identityValue returns the version of the running goflare module, or "dev"
+// when there is no build information (a local checkout).
 func identityValue() string {
 	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
 		return bi.Main.Version
@@ -24,19 +24,19 @@ func identityValue() string {
 	return "dev"
 }
 
-// SiteOutput es el sitio ya compilado, listo para volcarse a disco.
+// SiteOutput is the already-built site, ready to be flushed to disk.
 type SiteOutput interface {
 	WriteTo(fs sitec.FS) error
 }
 
-// SiteBuilder compila el sitio estático del proyecto.
+// SiteBuilder builds the project's static site.
 //
-// Es una costura deliberada: la tubería real de sitec exige un módulo Go
-// válido en disco y un compilador instalado, y los tests de este repo no
-// tienen ninguna de las dos cosas. La implementación real es buildSite.
+// It is a deliberate seam: the real sitec pipeline demands a valid Go module on
+// disk and an installed compiler, and this repo's tests have neither. The real
+// implementation is buildSite.
 type SiteBuilder func(cfg sitec.BuildConfig) (SiteOutput, error)
 
-// buildSite es la implementación real: la tubería completa de sitec.
+// buildSite is the real implementation: the full sitec pipeline.
 func buildSite(cfg sitec.BuildConfig) (SiteOutput, error) {
 	out, err := sitec.Build(cfg)
 	if err != nil {

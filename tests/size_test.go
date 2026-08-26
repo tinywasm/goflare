@@ -1,3 +1,5 @@
+//go:build !wasm
+
 package goflare_test
 
 import (
@@ -58,8 +60,8 @@ func TestCheckWasmSizeAlwaysReports(t *testing.T) {
 	}
 
 	line := logs[0]
-	if !strings.Contains(line, "crudo") || !strings.Contains(line, "gzip") {
-		t.Errorf("expected report to contain 'crudo' and 'gzip', got: %s", line)
+	if !strings.Contains(line, "raw") || !strings.Contains(line, "gzip") {
+		t.Errorf("expected report to contain 'raw' and 'gzip', got: %s", line)
 	}
 }
 
@@ -114,8 +116,8 @@ func TestCheckWasmSizeAborts(t *testing.T) {
 		t.Fatal("expected error for 1 MiB file, got nil")
 	}
 
-	if !strings.Contains(err.Error(), "presupuesto") {
-		t.Errorf("expected error message to contain 'presupuesto', got: %v", err)
+	if !strings.Contains(err.Error(), "budget") {
+		t.Errorf("expected error message to contain 'budget', got: %v", err)
 	}
 }
 

@@ -1,6 +1,6 @@
 package actiongen
 
-// KeyValue es un par ordenado clave-valor.
+// KeyValue is an ordered key-value pair.
 type KeyValue struct {
 	Key   string
 	Value string
