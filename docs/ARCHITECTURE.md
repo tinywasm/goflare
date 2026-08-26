@@ -77,6 +77,13 @@ goflare/
 #   edge/, workers/, d1/, r2/, log/, assets/, env_*.go
 ```
 
+## Un binario, no un módulo
+
+`goflare` se consume como un **binario publicado**, no como una dependencia en el `go.mod` del proyecto:
+- Compilar `goflare` desde fuentes en el runner de CI toma entre 18 s (máquina rápida caliente) y 40-70 s (runner de GitHub). La caché de `actions/setup-go` se invalida frecuentemente por cambios en `go.sum`. Descargar el binario publicado (10 MB) toma 1-2 s.
+- El binario instala y gestiona TinyGo por su propia cuenta, garantizando **una sola fuente** para la versión del compilador WASM.
+- **Riesgo de desajuste de versiones (ABI skew):** Al compilar con un binario independiente, los assets JS embebidos en el binario y el runtime `github.com/tinywasm/cloudflare` importado por el proyecto Go podrían divergir. Para prevenirlo, `CheckVersionSkew` verifica en `goflare deploy` que ambas versiones coincidan exactamente y aborta con un mensaje claro si difieren.
+
 ## Design Principles
 
 - **Single Deployment Path:** Every project deploys as a Cloudflare Worker with static assets.

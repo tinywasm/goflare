@@ -25,6 +25,9 @@ This is the single most important thing to get right in this repo.
 |---|---|---|---|
 | **`wasm`** | **`tinywasm/cloudflare`** (`edge/`, `workers/`, `d1/`, `r2/`, `log/`, `env_wasm.go`) — see `tinywasm/cloudflare/AGENTS.md` for isolate lifecycle, `runtime.ticks` ABI, and shared-global constraints | **Inside the Cloudflare Worker** | **No standard library.** Use `tinywasm/fmt` instead of `errors`/`fmt`/`strconv`/`strings`. Talks to the runtime through `syscall/js`. |
 | **`!wasm`** | `build.go`, `mode.go`, `config.go`, `cloudflare.go`, `devserver/`, `cmd/` | The developer's machine / CI | **The standard library is correct and expected here** — `net/http`, `go/parser`, `os`, `strings`. |
+| **`actiongen`** | `actiongen/` | Generator tool | **Strictly standard library only.** No ecosystem dependencies (`tinywasm/*`). Designed for extraction to its own repository. |
+
+> ⚠️ `action.yml` in the root of the repository is **generated code** produced by `actiongen` and synchronized by `TestActionYmlIsInSync`. Never edit `action.yml` manually — modify `action_data.go` and run `go test ./tests/`.
 
 > ⚠️ **Anti-footgun.** The ecosystem rule "no stdlib in WASM code" applies **only to the `wasm`
 > column**. Do not "fix" stdlib imports in host tooling — that code never reaches a browser or

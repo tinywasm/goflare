@@ -1,37 +1,19 @@
 ```mermaid
-sequenceDiagram
-    participant G as GoFlare
-    participant ENV as Environment (CI/Local)
-    participant CF as Cloudflare API
-
-    Note over G: After Build
-
-    G->>ENV: os.Getenv("CLOUDFLARE_API_TOKEN")
-    ENV-->>G: Token string
-
-    alt Has Public Assets (cfg.PublicDir set)
-        G->>CF: POST /accounts/:id/workers/scripts/:name/assets-upload-session (Manifest)
-        CF-->>G: Session JWT + Buckets
-        loop Each Bucket
-            G->>CF: POST /workers/assets/upload?base64=true (Auth: Session JWT)
-            CF-->>G: Completion JWT
-        end
-    end
-
-    G->>CF: PUT /accounts/:id/workers/scripts/:name (Multipart: metadata + edge.js + edge.wasm)
-    CF-->>G: 200 OK
-
-    opt Custom Domain Set
-        G->>CF: GET /zones
-        G->>CF: PUT /accounts/:id/workers/domains
-    end
-
-    opt Edge Script Deployed
-        G->>CF: GET /api/__goflare_probe
-        Note over G: Verify x-goflare identity header
-    end
-
-    G->>User: Deployment Summary
+flowchart TD
+    A[push a main] --> B[actions/setup-go<br/>desde el go.mod del proyecto]
+    B --> C[descargar el binario<br/>de goflare del release]
+    C --> D{cache de TinyGo?}
+    D -->|acierto| F[TinyGo listo]
+    D -->|fallo| E[goflare tinygo<br/>instala y publica el bindir]
+    E --> F
+    F --> G[go vet]
+    G --> H[go test]
+    H --> I[goflare build]
+    I --> J[reporte de tamano<br/>crudo y gzip]
+    J --> K{sobre el presupuesto?}
+    K -->|si| L[abortar antes<br/>de gastar la subida]
+    K -->|no| M[comando pre-deploy<br/>migracion del esquema]
+    M --> N[goflare deploy]
 ```
 
 ## Regla: Despliegue único

@@ -1,0 +1,29 @@
+name: Action
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  consume:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: action.yml esta sincronizado
+        run: go test ./tests/ -run TestActionYmlIsInSync -v
+
+      - name: consumir la action sin desplegar
+        uses: ./
+        with:
+          worker: goflare-action-selftest
+          deploy: 'false'
+          test: ''
