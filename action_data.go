@@ -42,8 +42,19 @@ if [ -z "$version" ]; then
   ref="${{ github.action_ref }}"
   case "$ref" in
     v[0-9]*.[0-9]*.[0-9]*) version="$ref" ;;
-    *) version="%s" ;;
+    *)
+      # A floating ref such as v1 carries no release number, so ask GitHub
+      # which release is current.
+      version="$(curl -fsSL https://api.github.com/repos/tinywasm/goflare/releases/latest \
+        | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1)"
+      ;;
   esac
+fi
+
+# Last resort only. This literal is baked at generation time, so it can never
+# name the tag being released right now.
+if [ -z "$version" ]; then
+  version="%s"
 fi
 
 case "$(uname -s)-$(uname -m)" in
