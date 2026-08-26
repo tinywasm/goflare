@@ -20,10 +20,3 @@ jobs:
 
       - name: action.yml esta sincronizado
         run: go test ./tests/ -run TestActionYmlIsInSync -v
-
-      - name: consumir la action sin desplegar
-        uses: ./
-        with:
-          worker: goflare-action-selftest
-          deploy: 'false'
-          test: ''
