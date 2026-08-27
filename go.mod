@@ -9,7 +9,7 @@ require (
 	github.com/tinywasm/git v0.0.7
 	github.com/tinywasm/gobuild v0.0.27
 	github.com/tinywasm/modfind v0.0.8
-	github.com/tinywasm/server v0.2.42
+	github.com/tinywasm/server v0.2.43
 	github.com/tinywasm/sitec v0.2.4
 	github.com/tinywasm/sqlt v0.0.8
 	github.com/tinywasm/tinygo v1.0.0
@@ -43,7 +43,7 @@ require (
 	github.com/tinywasm/fetch v0.1.24 // indirect
 	github.com/tinywasm/html v0.0.17 // indirect
 	github.com/tinywasm/json v0.5.23 // indirect
-	github.com/tinywasm/model v0.1.4
-	github.com/tinywasm/router v0.1.28
+	github.com/tinywasm/model v0.1.7
+	github.com/tinywasm/router v0.1.29
 	github.com/tinywasm/svg v0.3.0 // indirect
 )
