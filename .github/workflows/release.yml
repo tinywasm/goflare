@@ -1,5 +1,8 @@
-name: Release
+# GENERATED FILE — do not edit manually.
+# Produced by ghaction and kept in sync by a test.
+# To change it, edit the workflow definition and run: gotest ./...
 
+name: Release
 on:
   push:
     tags: ['v*']
@@ -11,36 +14,30 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      -
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          fetch-tags: true
-
-      - uses: actions/setup-go@v6
+          fetch-tags: 'true'
+      -
+        uses: actions/setup-go@v6
         with:
-          go-version-file: 'go.mod'
-
-      # gorelease is deliberately NOT used here. It authenticates through
-      # tinywasm/keyring, and a GitHub runner has no credential store, so it
-      # fails with "keyring: credential store unavailable" no matter what token
-      # is exported. gorelease is a developer-machine tool; in CI the native
-      # path is the runner's own token plus gh.
+          go-version-file: go.mod
       - name: Build the release binaries
+        shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist
           for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
-            os="${target%/*}"
-            arch="${target#*/}"
-            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
+            os=${target%/*}
+            arch=${target#*/}
+            CGO_ENABLED=0 GOOS=$os GOARCH=$arch \
               go build -trimpath -ldflags="-s -w" \
               -o "dist/goflare-${os}-${arch}" ./cmd/goflare
           done
           ls -l dist
-
       - name: Publish the release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
@@ -51,8 +48,10 @@ jobs:
               --title "$tag" \
               --generate-notes
           fi
-
+        env:
+          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
       - name: Move the v1 tag
+        shell: bash
         run: |
           set -euo pipefail
           git tag -f v1 "${GITHUB_SHA}"
