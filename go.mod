@@ -6,6 +6,7 @@ require (
 	github.com/tdewolff/minify/v2 v2.24.12
 	github.com/tinywasm/cloudflare v0.0.11
 	github.com/tinywasm/ddl v0.0.12
+	github.com/tinywasm/ghaction v0.1.1
 	github.com/tinywasm/git v0.0.7
 	github.com/tinywasm/gobuild v0.0.27
 	github.com/tinywasm/modfind v0.0.8
@@ -23,7 +24,6 @@ require (
 	github.com/tinywasm/command v0.0.2 // indirect
 	github.com/tinywasm/fmt v0.25.7 // indirect
 	github.com/tinywasm/font v0.0.4 // indirect
-	github.com/tinywasm/ghaction v0.1.0 // indirect
 	github.com/tinywasm/image v0.1.0 // indirect
 	github.com/tinywasm/js v0.0.4 // indirect
 	github.com/tinywasm/storage v0.0.2 // indirect
