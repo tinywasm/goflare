@@ -1,6 +1,6 @@
-# ARCHIVO GENERADO — no lo edites a mano.
-# Lo produce actiongen y lo mantiene sincronizado un test.
-# Para cambiarlo, edita action_data.go y corre: gotest ./...
+# GENERATED FILE — do not edit manually.
+# Produced by ghaction and kept in sync by a test.
+# To change it, edit action_data.go and run: gotest ./...
 
 name: Deploy with goflare
 description: Builds a Go project to WASM and deploys it as a Cloudflare Worker
@@ -66,10 +66,10 @@ outputs:
 runs:
   using: composite
   steps:
-    # The version comes from the project go.mod, so the caller picks it, not us. setup-go also caches ~/go/pkg/mod and ~/.cache/go-build on its own, keyed off go.sum.
+    # The version comes from the project go.mod, so the caller picks it, not us. setup-go also caches ~/go/pkg/mod and ~/.cache/go-build on its own, keyed off go.sum. Via ghaction preset (Node24).
     - name: Setup Go
       if: 'inputs.setup-go == ''true'''
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version-file: go.mod
     - name: Resolve and download the goflare binary
@@ -95,7 +95,7 @@ runs:
         # Last resort only. This literal is baked at generation time, so it can never
         # name the tag being released right now.
         if [ -z "$version" ]; then
-          version="v0.5.25"
+          version="v0.5.26"
         fi
 
         case "$(uname -s)-$(uname -m)" in

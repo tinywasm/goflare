@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/tinywasm/ghaction"
 	"github.com/tinywasm/goflare"
-	"github.com/tinywasm/goflare/actiongen"
 )
 
 func TestActionYmlIsInSync(t *testing.T) {
@@ -19,7 +19,7 @@ func TestActionYmlIsInSync(t *testing.T) {
 	actionPath := filepath.Join("..", goflare.ActionFilePath)
 	a := goflare.GoflareAction(goflare.TinyGoVersion, tag)
 
-	changed, err := actiongen.Sync(actionPath, a)
+	changed, err := ghaction.Sync(actionPath, a)
 	if err != nil {
 		t.Fatal(err)
 	}

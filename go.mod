@@ -23,6 +23,7 @@ require (
 	github.com/tinywasm/command v0.0.2 // indirect
 	github.com/tinywasm/fmt v0.25.7 // indirect
 	github.com/tinywasm/font v0.0.4 // indirect
+	github.com/tinywasm/ghaction v0.1.0 // indirect
 	github.com/tinywasm/image v0.1.0 // indirect
 	github.com/tinywasm/js v0.0.4 // indirect
 	github.com/tinywasm/storage v0.0.2 // indirect

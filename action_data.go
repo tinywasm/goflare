@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/tinywasm/ghaction"
 	"github.com/tinywasm/git"
-	"github.com/tinywasm/goflare/actiongen"
 )
 
 const (
@@ -30,7 +30,7 @@ func LatestReleaseTag() (string, error) {
 }
 
 // GoflareAction builds the description of the goflare action.
-func GoflareAction(tinyGoVersion, goflareVersion string) actiongen.Action {
+func GoflareAction(tinyGoVersion, goflareVersion string) ghaction.Action {
 	if goflareVersion == "" {
 		goflareVersion = "v0.5.22"
 	}
@@ -94,7 +94,7 @@ fi
 echo "$bindir" >> "$GITHUB_PATH"
 echo "version=${version}" >> "$GITHUB_OUTPUT"`
 
-	envMapping := []actiongen.KeyValue{
+	envMapping := []ghaction.KeyValue{
 		{Key: "PROJECT_NAME", Value: "${{ inputs.project || inputs.worker }}"},
 		{Key: "WORKER_NAME", Value: "${{ inputs.worker }}"},
 		{Key: "DOMAIN", Value: "${{ inputs.domain }}"},
@@ -104,15 +104,15 @@ echo "version=${version}" >> "$GITHUB_OUTPUT"`
 		{Key: "NOT_FOUND_HANDLING", Value: "${{ inputs.not-found-handling }}"},
 	}
 
-	return actiongen.Action{
+	return ghaction.Action{
 		Name:        "Deploy with goflare",
 		Description: "Builds a Go project to WASM and deploys it as a Cloudflare Worker",
 		Author:      "tinywasm",
-		Branding: actiongen.Branding{
+		Branding: ghaction.Branding{
 			Icon:  "upload-cloud",
 			Color: "orange",
 		},
-		Inputs: []actiongen.Input{
+		Inputs: []ghaction.Input{
 			{Name: "version", Description: "which goflare release to download; empty = resolve automatically", Default: "", Required: false},
 			{Name: "project", Description: "PROJECT_NAME; empty = the value of worker", Default: "", Required: false},
 			{Name: "worker", Description: "WORKER_NAME", Required: true},
@@ -128,17 +128,17 @@ echo "version=${version}" >> "$GITHUB_OUTPUT"`
 			{Name: "deploy", Description: "set to 'false' on pull requests to build without deploying", Default: "true", Required: false},
 			{Name: "cache", Description: "cache the TinyGo tree", Default: "true", Required: false},
 		},
-		Outputs: []actiongen.Output{
+		Outputs: []ghaction.Output{
 			{Name: "goflare-version", Description: "the version that was resolved and downloaded", Value: "${{ steps.goflare.outputs.version }}"},
 			{Name: "tinygo-version", Description: "whatever tinygo version reports", Value: "${{ steps.tinygo.outputs.version }}"},
 		},
-		Steps: []actiongen.Step{
+		Steps: []ghaction.Step{
 			{
 				Name:    "Setup Go",
 				If:      "inputs.setup-go == 'true'",
-				Uses:    "actions/setup-go@v5",
-				With:    []actiongen.KeyValue{{Key: "go-version-file", Value: "go.mod"}},
-				Comment: "The version comes from the project go.mod, so the caller picks it, not us. setup-go also caches ~/go/pkg/mod and ~/.cache/go-build on its own, keyed off go.sum.",
+				Uses:    ghaction.DefaultSetupGo,
+				With:    []ghaction.KeyValue{{Key: "go-version-file", Value: "go.mod"}},
+				Comment: "The version comes from the project go.mod, so the caller picks it, not us. setup-go also caches ~/go/pkg/mod and ~/.cache/go-build on its own, keyed off go.sum. Via ghaction preset (Node24).",
 			},
 			{
 				Name:  "Resolve and download the goflare binary",
@@ -150,7 +150,7 @@ echo "version=${version}" >> "$GITHUB_OUTPUT"`
 				Name: "Restore the TinyGo cache",
 				If:   "inputs.cache == 'true'",
 				Uses: "actions/cache@v4",
-				With: []actiongen.KeyValue{
+				With: []ghaction.KeyValue{
 					{Key: "path", Value: "/usr/local/tinygo\n~/.local/tinygo"},
 					{Key: "key", Value: fmt.Sprintf(TinyGoCacheKeyFmt, tinyGoVersion)},
 				},
