@@ -26,7 +26,7 @@ require (
 	github.com/tinywasm/font v0.0.4 // indirect
 	github.com/tinywasm/image v0.1.0 // indirect
 	github.com/tinywasm/js v0.0.4 // indirect
-	github.com/tinywasm/storage v0.0.2 // indirect
+	github.com/tinywasm/storage v0.0.6 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/image v0.45.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
