@@ -40,9 +40,9 @@ require (
 	github.com/tdewolff/parse/v2 v2.8.11 // indirect
 	github.com/tinywasm/context v0.0.22 // indirect
 	github.com/tinywasm/css v0.4.15 // indirect
-	github.com/tinywasm/dom v0.13.7 // indirect
+	github.com/tinywasm/dom v0.13.8 // indirect
 	github.com/tinywasm/fetch v0.1.24 // indirect
-	github.com/tinywasm/html v0.0.17 // indirect
+	github.com/tinywasm/html v0.0.19 // indirect
 	github.com/tinywasm/json v0.5.23 // indirect
 	github.com/tinywasm/model v0.1.7
 	github.com/tinywasm/router v0.1.30
