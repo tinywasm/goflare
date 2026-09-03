@@ -45,6 +45,6 @@ require (
 	github.com/tinywasm/html v0.0.17 // indirect
 	github.com/tinywasm/json v0.5.23 // indirect
 	github.com/tinywasm/model v0.1.7
-	github.com/tinywasm/router v0.1.29
+	github.com/tinywasm/router v0.1.30
 	github.com/tinywasm/svg v0.3.0 // indirect
 )
