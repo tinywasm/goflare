@@ -10,7 +10,7 @@ require (
 	github.com/tinywasm/git v0.0.7
 	github.com/tinywasm/gobuild v0.0.27
 	github.com/tinywasm/modfind v0.0.8
-	github.com/tinywasm/server v0.2.43
+	github.com/tinywasm/server v0.2.44
 	github.com/tinywasm/sitec v0.2.4
 	github.com/tinywasm/sqlt v0.0.8
 	github.com/tinywasm/tinygo v1.0.0
